@@ -1,0 +1,66 @@
+# seed.yaml — Automation Contract for organvm-v-logos/essay-pipeline
+# Schema: seed/v1.0
+# Generated: 2026-02-17 (LOGOS Sprint)
+
+schema_version: "1.0"
+organ: V
+organ_name: Public Process
+repo: essay-pipeline
+org: organvm-v-logos
+
+metadata:
+  implementation_status: SKELETON
+  tier: standard
+  promotion_status: LOCAL
+  last_validated: "2026-02-17"
+  generated: "2026-02-17"
+  sprint: "LOGOS"
+
+agents:
+  - name: ci
+    trigger: on_push
+    workflow: .github/workflows/ci.yml
+    description: "Continuous integration pipeline"
+
+produces:
+  - type: essay-topic-suggestions
+    format: github-issue
+    consumers:
+      - organ: ORGAN-V
+        repos: ["public-process"]
+        relationship: "suggests-topics-for"
+  - type: sprint-narrative-draft
+    format: markdown
+    consumers:
+      - organ: ORGAN-V
+        repos: ["public-process"]
+        relationship: "generates-drafts-for"
+  - type: essays-index
+    format: json
+    consumers:
+      - organ: ORGAN-V
+        repos: ["public-process"]
+        relationship: "indexes"
+
+consumes:
+  - type: essay-markdown
+    source:
+      organ: ORGAN-V
+      repo: public-process
+    trigger: on_push
+    description: "Reads _posts/ to validate frontmatter and rebuild index"
+  - type: system-activity
+    source:
+      organ: ALL
+      repo: "*"
+    trigger:
+      schedule: "0 6 * * 1"
+    description: "Scans all 8 orgs for essay-worthy events"
+
+subscriptions:
+  - event: promotion.completed
+    source: ORGAN-IV
+    action: "Generate essay topic about promoted repo"
+  - event: ci.passed
+    source: ALL
+    action: "Track system health for sprint narratives"
