@@ -1,4 +1,4 @@
-name: Minimal CI
+name: Essay Pipeline CI
 
 on:
   push:
@@ -8,53 +8,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout essay-pipeline
         uses: actions/checkout@v6
 
-      - name: Detect repository type
-        id: detect
-        run: |
-          if [ -f "Package.swift" ]; then
-            echo "type=swift" >> $GITHUB_OUTPUT
-          elif [ -f "Gemfile" ] || [ -f "_config.yml" ]; then
-            echo "type=ruby" >> $GITHUB_OUTPUT
-          elif [ -f "package.json" ]; then
-            echo "type=node" >> $GITHUB_OUTPUT
-          elif [ -f "pyproject.toml" ] || [ -f "requirements.txt" ]; then
-            echo "type=python" >> $GITHUB_OUTPUT
-          else
-            echo "type=generic" >> $GITHUB_OUTPUT
-          fi
+      - name: Checkout editorial-standards
+        uses: actions/checkout@v6
+        with:
+          repository: organvm-v-logos/editorial-standards
+          path: ../editorial-standards
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyyaml pytest
+
+      - name: Run tests
+        run: pytest tests/ -v
 
       - name: Validate structure
         run: |
-          echo "Repository structure:"
-          ls -la
-          echo ""
-          echo "README check:"
-          if [ -f "README.md" ]; then
-            echo "::notice::README.md found"
-            wc -w README.md
-          else
-            echo "::warning::No README.md found"
-          fi
-          echo ""
-          echo "License check:"
-          if [ -f "LICENSE" ] || [ -f "LICENSE.md" ]; then
-            echo "::notice::License file found"
-          else
-            echo "::warning::No license file found"
-          fi
-
-      - name: Python lint check
-        if: steps.detect.outputs.type == 'python'
-        continue-on-error: true
-        run: |
-          pip install ruff
-          ruff check . || echo "::warning::Linting issues found"
+          test -f "README.md" && echo "::notice::README.md found" || echo "::warning::No README.md found"
+          test -f "LICENSE" && echo "::notice::License file found" || echo "::warning::No license file found"
 
       - name: Success
-        run: echo "::notice::Minimal CI validation passed"
+        run: echo "::notice::Essay Pipeline CI passed"
