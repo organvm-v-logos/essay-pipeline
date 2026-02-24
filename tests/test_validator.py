@@ -88,6 +88,38 @@ class TestValidateField:
         errors = validate_field("related_repos", ["bad-repo"], spec)
         assert any("pattern" in e for e in errors)
 
+    def test_tag_pattern_valid(self):
+        spec = {
+            "type": "list",
+            "min_items": 2,
+            "max_items": 8,
+            "item_type": "string",
+            "item_pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+        }
+        assert validate_field("tags", ["meta-system", "building-in-public"], spec) == []
+
+    def test_tag_pattern_rejects_uppercase(self):
+        spec = {
+            "type": "list",
+            "min_items": 1,
+            "max_items": 8,
+            "item_type": "string",
+            "item_pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+        }
+        errors = validate_field("tags", ["UPPERCASE", "valid-tag"], spec)
+        assert any("UPPERCASE" in e and "pattern" in e for e in errors)
+
+    def test_tag_pattern_rejects_spaces(self):
+        spec = {
+            "type": "list",
+            "min_items": 1,
+            "max_items": 8,
+            "item_type": "string",
+            "item_pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+        }
+        errors = validate_field("tags", ["has spaces"], spec)
+        assert any("pattern" in e for e in errors)
+
 
 class TestValidateEssay:
     def test_valid_essay_passes(self):
@@ -119,3 +151,8 @@ class TestValidateEssay:
         schema = get_schema()
         errors = validate_essay(FIXTURES / "short-excerpt.md", schema)
         assert any("excerpt" in e and "too short" in e for e in errors)
+
+    def test_bad_tag_format_detected(self):
+        schema = get_schema()
+        errors = validate_essay(FIXTURES / "bad-tag-format.md", schema)
+        assert any("tags" in e and "pattern" in e for e in errors)
