@@ -17,6 +17,7 @@ essay-validate = "src.validator:main"
 essay-index = "src.indexer:main"
 essay-suggest = "src.topic_suggester:main"
 essay-narrate = "src.sprint_narrator:main"
+log-generate = "src.log_generator:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
