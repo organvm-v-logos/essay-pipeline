@@ -1,9 +1,14 @@
-"""Frontmatter schema validator for ORGAN-V essays.
+"""Frontmatter schema validator for ORGAN-V content.
 
 Reads YAML frontmatter from Markdown files, validates each field against
-the schema defined in editorial-standards/schemas/frontmatter-schema.yaml.
+a schema (essay or log) defined in editorial-standards/schemas/.
+
+Supports dual content types:
+  - essay (default): validates against frontmatter-schema.yaml
+  - log: validates against log-schema.yaml (lighter requirements)
 
 CLI: python -m src.validator --posts-dir _posts/ --schema path/to/frontmatter-schema.yaml
+     python -m src.validator --posts-dir _logs/ --schema path/to/log-schema.yaml --content-type log
 """
 
 import argparse
@@ -77,8 +82,11 @@ def validate_field(field_name: str, value, spec: dict) -> list[str]:
     return errors
 
 
-def validate_essay(filepath: Path, schema: dict) -> list[str]:
-    """Validate a single essay's frontmatter against the schema.
+def validate_entry(filepath: Path, schema: dict) -> list[str]:
+    """Validate a single content entry's frontmatter against the schema.
+
+    Works for both essays and logs — the schema determines which fields
+    are required vs optional.
 
     Returns a list of error strings (empty if valid).
     """
@@ -97,7 +105,19 @@ def validate_essay(filepath: Path, schema: dict) -> list[str]:
         for err in field_errors:
             errors.append(f"{filepath.name}: field '{field_name}' — {err}")
 
+    # Validate optional fields if present
+    optional = schema.get("optional_fields", {})
+    for field_name, spec in optional.items():
+        if field_name in fm:
+            field_errors = validate_field(field_name, fm[field_name], spec)
+            for err in field_errors:
+                errors.append(f"{filepath.name}: field '{field_name}' — {err}")
+
     return errors
+
+
+# Backward-compatible alias
+validate_essay = validate_entry
 
 
 def validate_all(posts_dir: str, schema_path: str) -> list[str]:
@@ -113,27 +133,32 @@ def validate_all(posts_dir: str, schema_path: str) -> list[str]:
 
     all_errors = []
     for post in posts:
-        all_errors.extend(validate_essay(post, schema))
+        all_errors.extend(validate_entry(post, schema))
 
     return all_errors
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Validate essay frontmatter")
-    parser.add_argument("--posts-dir", required=True, help="Path to _posts/ directory")
-    parser.add_argument("--schema", required=True, help="Path to frontmatter-schema.yaml")
+    parser = argparse.ArgumentParser(description="Validate content frontmatter")
+    parser.add_argument("--posts-dir", required=True, help="Path to content directory (_posts/ or _logs/)")
+    parser.add_argument("--schema", required=True, help="Path to schema YAML file")
+    parser.add_argument(
+        "--content-type", choices=["essay", "log"], default="essay",
+        help="Content type being validated (default: essay)"
+    )
     args = parser.parse_args()
 
     errors = validate_all(args.posts_dir, args.schema)
 
+    label = "essays" if args.content_type == "essay" else "logs"
     if errors:
         print(f"FAILED — {len(errors)} error(s):\n")
         for err in errors:
             print(f"  {err}")
         sys.exit(1)
     else:
-        posts_count = len(list(Path(args.posts_dir).glob("*.md")))
-        print(f"PASSED — {posts_count} essays validated, 0 errors")
+        count = len(list(Path(args.posts_dir).glob("*.md")))
+        print(f"PASSED — {count} {label} validated, 0 errors")
         sys.exit(0)
 
 

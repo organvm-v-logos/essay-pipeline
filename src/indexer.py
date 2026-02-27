@@ -1,9 +1,10 @@
-"""Essay indexer for ORGAN-V public-process.
+"""Content indexer for ORGAN-V public-process.
 
-Reads all Markdown essays, extracts frontmatter, computes word counts,
-and generates structured JSON data files.
+Reads all Markdown content (essays and logs), extracts frontmatter,
+computes word counts, and generates structured JSON data files.
 
 CLI: python -m src.indexer --posts-dir _posts/ --output-dir data/
+     python -m src.indexer --posts-dir _posts/ --logs-dir _logs/ --output-dir data/
 """
 
 import argparse
@@ -101,23 +102,71 @@ def build_cross_references(essays: list[dict]) -> dict:
     }
 
 
-def build_publication_calendar(essays: list[dict]) -> dict:
-    """Build publication-calendar.json with essay count by date."""
-    by_date = Counter()
+def build_publication_calendar(essays: list[dict], logs: list[dict] | None = None) -> dict:
+    """Build publication-calendar.json with content count by date."""
+    essay_dates = Counter()
     for e in essays:
         d = e["frontmatter"].get("date", "unknown")
-        by_date[d] += 1
+        essay_dates[d] += 1
 
-    return {
-        "version": "1.1",
+    result: dict = {
+        "version": "1.2",
         "updated": date.today().isoformat(),
         "total_essays": len(essays),
-        "dates": dict(sorted(by_date.items())),
+        "essays": dict(sorted(essay_dates.items())),
+    }
+
+    if logs is not None:
+        log_dates = Counter()
+        for entry in logs:
+            d = entry["frontmatter"].get("date", "unknown")
+            log_dates[d] += 1
+        result["total_logs"] = len(logs)
+        result["logs"] = dict(sorted(log_dates.items()))
+
+    return result
+
+
+def build_logs_index(logs: list[dict]) -> dict:
+    """Build the logs-index.json structure."""
+    tags = Counter()
+    moods = Counter()
+    total_words = 0
+
+    entries = []
+    for entry in logs:
+        fm = entry["frontmatter"]
+        mood = fm.get("mood", "")
+        if mood:
+            moods[mood] += 1
+        for tag in fm.get("tags", []):
+            tags[tag] += 1
+        wc = entry["computed_word_count"]
+        total_words += wc
+        entries.append({
+            "filename": entry["filename"],
+            "title": fm.get("title", ""),
+            "date": fm.get("date", ""),
+            "mood": mood,
+            "tags": fm.get("tags", []),
+            "word_count": wc,
+            "organs_touched": fm.get("organs_touched", []),
+        })
+
+    return {
+        "version": "1.0",
+        "updated": date.today().isoformat(),
+        "generated_by": "essay-pipeline indexer v0.2.0",
+        "total_logs": len(logs),
+        "total_words": total_words,
+        "mood_frequency": dict(sorted(moods.items(), key=lambda x: -x[1])),
+        "tag_frequency": dict(sorted(tags.items(), key=lambda x: -x[1])),
+        "logs": entries,
     }
 
 
-def index_all(posts_dir: str, output_dir: str) -> dict:
-    """Index all essays and write JSON data files.
+def index_all(posts_dir: str, output_dir: str, logs_dir: str | None = None) -> dict:
+    """Index all content and write JSON data files.
 
     Returns a summary dict with counts.
     """
@@ -128,12 +177,21 @@ def index_all(posts_dir: str, output_dir: str) -> dict:
         if data:
             essays.append(data)
 
+    logs = []
+    if logs_dir:
+        logs_path = Path(logs_dir)
+        if logs_path.exists():
+            for p in sorted(logs_path.glob("*.md")):
+                data = extract_essay_data(p)
+                if data:
+                    logs.append(data)
+
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
     index = build_essays_index(essays)
     xrefs = build_cross_references(essays)
-    calendar = build_publication_calendar(essays)
+    calendar = build_publication_calendar(essays, logs if logs else None)
 
     (out / "essays-index.json").write_text(
         json.dumps(index, indent=2, ensure_ascii=False) + "\n"
@@ -145,24 +203,37 @@ def index_all(posts_dir: str, output_dir: str) -> dict:
         json.dumps(calendar, indent=2, ensure_ascii=False) + "\n"
     )
 
-    return {
+    if logs:
+        logs_index = build_logs_index(logs)
+        (out / "logs-index.json").write_text(
+            json.dumps(logs_index, indent=2, ensure_ascii=False) + "\n"
+        )
+
+    summary = {
         "essays": len(essays),
         "categories": len(index["categories"]),
         "total_words": index["total_words"],
     }
+    if logs:
+        summary["logs"] = len(logs)
+    return summary
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Index essays and generate data files")
+    parser = argparse.ArgumentParser(description="Index content and generate data files")
     parser.add_argument("--posts-dir", required=True, help="Path to _posts/ directory")
+    parser.add_argument("--logs-dir", default=None, help="Path to _logs/ directory (optional)")
     parser.add_argument("--output-dir", required=True, help="Path to output data/ directory")
     args = parser.parse_args()
 
-    summary = index_all(args.posts_dir, args.output_dir)
-    print(
-        f"Indexed {summary['essays']} essays across "
+    summary = index_all(args.posts_dir, args.output_dir, args.logs_dir)
+    parts = [
+        f"{summary['essays']} essays across "
         f"{summary['categories']} categories ({summary['total_words']} words)"
-    )
+    ]
+    if "logs" in summary:
+        parts.append(f"{summary['logs']} logs")
+    print(f"Indexed {', '.join(parts)}")
     sys.exit(0)
 
 
