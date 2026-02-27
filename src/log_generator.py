@@ -396,11 +396,18 @@ def write_outputs(
         json.dumps(json_output, indent=2, ensure_ascii=False) + "\n"
     )
 
-    # Scaffold output
+    # Scaffold output — never overwrite an existing log entry
     logs_dir.mkdir(parents=True, exist_ok=True)
     scaffold_path = logs_dir / f"{until_date}-captains-log.md"
-    scaffold = build_scaffold(activity, until_date)
-    scaffold_path.write_text(scaffold)
+    if scaffold_path.exists():
+        print(
+            f"Warning: {scaffold_path} already exists, skipping scaffold "
+            f"(use --dry-run to preview)",
+            file=sys.stderr,
+        )
+    else:
+        scaffold = build_scaffold(activity, until_date)
+        scaffold_path.write_text(scaffold)
 
     return json_path, scaffold_path
 
