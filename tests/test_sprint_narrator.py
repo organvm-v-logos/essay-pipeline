@@ -179,7 +179,7 @@ class TestNarrateAll:
         assert output.exists()
         content = output.read_text()
         assert "# Sprint Narrative" in content
-        assert summary["pipeline_version"] == "0.2.0"
+        assert summary["pipeline_version"] == "0.3.0"
         assert len(summary["sections"]) == 7
 
     def test_handles_missing_files(self, tmp_path):

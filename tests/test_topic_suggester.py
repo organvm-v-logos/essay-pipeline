@@ -174,6 +174,6 @@ class TestSuggestAll:
         )
 
         assert "generated_at" in result
-        assert result["pipeline_version"] == "0.2.0"
+        assert result["pipeline_version"] == "0.3.0"
         assert result["total_suggestions"] == len(result["suggestions"])
         assert result["total_suggestions"] > 0

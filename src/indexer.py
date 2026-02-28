@@ -74,7 +74,7 @@ def build_essays_index(essays: list[dict]) -> dict:
     return {
         "version": "1.1",
         "updated": date.today().isoformat(),
-        "generated_by": "essay-pipeline indexer v0.1.0",
+        "generated_by": "essay-pipeline indexer v0.3.0",
         "total_essays": len(essays),
         "total_words": total_words,
         "categories": dict(sorted(categories.items(), key=lambda x: -x[1])),
@@ -156,7 +156,7 @@ def build_logs_index(logs: list[dict]) -> dict:
     return {
         "version": "1.0",
         "updated": date.today().isoformat(),
-        "generated_by": "essay-pipeline indexer v0.2.0",
+        "generated_by": "essay-pipeline indexer v0.3.0",
         "total_logs": len(logs),
         "total_words": total_words,
         "mood_frequency": dict(sorted(moods.items(), key=lambda x: -x[1])),

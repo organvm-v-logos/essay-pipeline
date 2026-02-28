@@ -1,8 +1,16 @@
 """Tests for the essay indexer."""
 
+import json
 from pathlib import Path
 
-from src.indexer import build_essays_index, build_cross_references, extract_essay_data
+from src.indexer import (
+    build_cross_references,
+    build_essays_index,
+    build_logs_index,
+    build_publication_calendar,
+    extract_essay_data,
+    index_all,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -62,3 +70,118 @@ class TestBuildCrossReferences:
         assert "valid-essay.md" in xrefs["entries"]
         entry = xrefs["entries"]["valid-essay.md"]
         assert "organvm-v-logos/essay-pipeline" in entry["related_repos"]
+
+
+def _make_essay(filename: str, title: str, dt: str, category: str = "meta-system",
+                tags: list | None = None, mood: str = "", organs: list | None = None) -> dict:
+    """Helper to build a minimal essay/log data dict for testing."""
+    return {
+        "filename": filename,
+        "frontmatter": {
+            "title": title,
+            "date": dt,
+            "category": category,
+            "tags": tags or ["governance"],
+            "reading_time": "5 min",
+            "portfolio_relevance": "HIGH",
+            "related_repos": [],
+            "mood": mood,
+            "organs_touched": organs or [],
+        },
+        "computed_word_count": 500,
+    }
+
+
+class TestBuildPublicationCalendar:
+    def test_groups_by_date(self):
+        essays = [
+            _make_essay("a.md", "A", "2026-02-10"),
+            _make_essay("b.md", "B", "2026-02-10"),
+            _make_essay("c.md", "C", "2026-02-11"),
+        ]
+        calendar = build_publication_calendar(essays)
+        assert calendar["total_essays"] == 3
+        assert calendar["essays"]["2026-02-10"] == 2
+        assert calendar["essays"]["2026-02-11"] == 1
+
+    def test_includes_logs_when_provided(self):
+        essays = [_make_essay("a.md", "A", "2026-02-10")]
+        logs = [_make_essay("log1.md", "Log 1", "2026-02-12")]
+        calendar = build_publication_calendar(essays, logs=logs)
+        assert "total_logs" in calendar
+        assert calendar["total_logs"] == 1
+        assert "logs" in calendar
+
+    def test_empty_essays(self):
+        calendar = build_publication_calendar([])
+        assert calendar["total_essays"] == 0
+        assert calendar["essays"] == {}
+
+
+class TestBuildLogsIndex:
+    def test_basic_structure(self):
+        logs = [_make_essay("log1.md", "Log 1", "2026-02-10", mood="focused",
+                            tags=["governance", "feature"])]
+        index = build_logs_index(logs)
+        assert index["total_logs"] == 1
+        assert index["total_words"] == 500
+        assert "focused" in index["mood_frequency"]
+        assert "governance" in index["tag_frequency"]
+
+    def test_mood_frequency(self):
+        logs = [
+            _make_essay("log1.md", "Log 1", "2026-02-10", mood="focused"),
+            _make_essay("log2.md", "Log 2", "2026-02-11", mood="focused"),
+            _make_essay("log3.md", "Log 3", "2026-02-12", mood="grinding"),
+        ]
+        index = build_logs_index(logs)
+        assert index["mood_frequency"]["focused"] == 2
+        assert index["mood_frequency"]["grinding"] == 1
+
+    def test_empty_logs(self):
+        index = build_logs_index([])
+        assert index["total_logs"] == 0
+        assert index["total_words"] == 0
+        assert index["mood_frequency"] == {}
+
+
+class TestIndexAll:
+    def _write_fixture(self, path: Path, title: str, dt: str) -> None:
+        """Write a minimal valid essay file."""
+        path.write_text(
+            f"---\nlayout: essay\ntitle: \"{title}\"\nauthor: \"@test\"\n"
+            f"date: \"{dt}\"\ntags:\n  - governance\n  - testing\n"
+            f"category: meta-system\nexcerpt: \"A test essay for pipeline validation.\"\n"
+            f"portfolio_relevance: HIGH\nrelated_repos:\n  - organvm-v-logos/test\n"
+            f"reading_time: \"5 min\"\nword_count: 500\n---\n\n"
+            + "Word " * 100 + "\n"
+        )
+
+    def test_generates_all_json_files(self, tmp_path):
+        posts_dir = tmp_path / "_posts"
+        posts_dir.mkdir()
+        output_dir = tmp_path / "data"
+        self._write_fixture(posts_dir / "2026-02-10-test.md", "Test Essay", "2026-02-10")
+
+        summary = index_all(str(posts_dir), str(output_dir))
+        assert summary["essays"] == 1
+        assert (output_dir / "essays-index.json").exists()
+        assert (output_dir / "cross-references.json").exists()
+        assert (output_dir / "publication-calendar.json").exists()
+        assert not (output_dir / "logs-index.json").exists()
+
+    def test_with_logs_generates_four_files(self, tmp_path):
+        posts_dir = tmp_path / "_posts"
+        posts_dir.mkdir()
+        logs_dir = tmp_path / "_logs"
+        logs_dir.mkdir()
+        output_dir = tmp_path / "data"
+        self._write_fixture(posts_dir / "2026-02-10-test.md", "Test Essay", "2026-02-10")
+        self._write_fixture(logs_dir / "2026-02-11-log.md", "Log Entry", "2026-02-11")
+
+        summary = index_all(str(posts_dir), str(output_dir), logs_dir=str(logs_dir))
+        assert summary["essays"] == 1
+        assert summary["logs"] == 1
+        assert (output_dir / "logs-index.json").exists()
+        logs_index = json.loads((output_dir / "logs-index.json").read_text())
+        assert logs_index["total_logs"] == 1

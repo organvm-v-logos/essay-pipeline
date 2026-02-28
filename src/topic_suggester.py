@@ -16,7 +16,7 @@ from pathlib import Path
 
 import yaml
 
-PIPELINE_VERSION = "0.2.0"
+PIPELINE_VERSION = "0.3.0"
 
 
 def find_underused_tags(

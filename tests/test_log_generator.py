@@ -2,9 +2,12 @@
 
 import json
 import subprocess
+import urllib.error
 from pathlib import Path
+from unittest.mock import patch
 
 from src.log_generator import (
+    ORG_TO_ORGAN,
     build_json_output,
     build_scaffold,
     detect_organ,
@@ -14,6 +17,7 @@ from src.log_generator import (
     git_files_changed,
     infer_tags,
     normalize_github_url,
+    scan_github_orgs,
     scan_workspace,
 )
 
@@ -422,3 +426,72 @@ class TestIntegration:
         content = scaffold_path.read_text()
         assert content.startswith("---\n")
         assert "my-tool" in content
+
+
+class TestOrgToOrganMapping:
+    def test_all_orgs_present(self):
+        expected_orgs = {
+            "ivviiviivvi", "omni-dromenon-machina", "labores-profani-crux",
+            "organvm-iv-taxis", "organvm-v-logos", "organvm-vi-koinonia",
+            "organvm-vii-kerygma", "meta-organvm",
+        }
+        assert set(ORG_TO_ORGAN.keys()) == expected_orgs
+
+    def test_organ_values_correct(self):
+        assert ORG_TO_ORGAN["ivviiviivvi"] == ("I", "Theoria")
+        assert ORG_TO_ORGAN["organvm-v-logos"] == ("V", "Logos")
+        assert ORG_TO_ORGAN["meta-organvm"] == ("META", "Meta")
+
+
+class TestScanGithubOrgs:
+    @patch("src.log_generator._github_api_get")
+    def test_processes_push_events(self, mock_api):
+        mock_api.return_value = [
+            {
+                "type": "PushEvent",
+                "created_at": "2026-02-20T10:00:00Z",
+                "repo": {"name": "organvm-v-logos/essay-pipeline"},
+                "payload": {
+                    "commits": [
+                        {"sha": "abc1234567890", "message": "feat: add feature"},
+                    ]
+                },
+            },
+        ]
+        activity = scan_github_orgs(
+            "ghp_test", ["organvm-v-logos"], "2026-02-19", "2026-02-21"  # allow-secret
+        )
+        assert activity["summary"]["total_commits"] == 1
+        assert activity["summary"]["repos_active"] == 1
+        assert "V" in activity["by_organ"]
+        assert "essay-pipeline" in activity["by_organ"]["V"]["repos"]
+
+    @patch("src.log_generator._github_api_get")
+    def test_handles_api_error(self, mock_api):
+        mock_api.side_effect = urllib.error.URLError("Connection refused")
+        activity = scan_github_orgs(
+            "ghp_test", ["organvm-v-logos"], "2026-02-19", "2026-02-21"  # allow-secret
+        )
+        assert activity["summary"]["total_commits"] == 0
+        assert activity["by_organ"] == {}
+
+    @patch("src.log_generator._github_api_get")
+    def test_filters_by_date(self, mock_api):
+        mock_api.return_value = [
+            {
+                "type": "PushEvent",
+                "created_at": "2026-02-20T10:00:00Z",
+                "repo": {"name": "organvm-v-logos/repo-a"},
+                "payload": {"commits": [{"sha": "aaa", "message": "feat: new"}]},
+            },
+            {
+                "type": "PushEvent",
+                "created_at": "2026-02-15T10:00:00Z",  # before since
+                "repo": {"name": "organvm-v-logos/repo-b"},
+                "payload": {"commits": [{"sha": "bbb", "message": "fix: old"}]},
+            },
+        ]
+        activity = scan_github_orgs(
+            "ghp_test", ["organvm-v-logos"], "2026-02-19", "2026-02-21"  # allow-secret
+        )
+        assert activity["summary"]["total_commits"] == 1
