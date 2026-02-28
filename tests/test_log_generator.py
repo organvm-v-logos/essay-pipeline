@@ -258,9 +258,12 @@ class TestScaffoldFrontmatter:
     def test_contains_narrative_sections(self):
         activity = self._make_activity()
         scaffold = build_scaffold(activity, "2026-02-28")
-        assert "## What I Did" in scaffold
-        assert "## What I Learned" in scaffold
-        assert "## What's Next" in scaffold
+        assert "## The Voices" in scaffold
+        assert "— *Ego*" in scaffold
+        assert "— *Id*" in scaffold
+        assert "— *Superego*" in scaffold
+        assert "— *Anima*" in scaffold
+        assert "— *Animus*" in scaffold
 
     def test_suggested_tags_in_comment(self):
         activity = self._make_activity()
@@ -330,7 +333,7 @@ class TestEmptyWorkspace:
         activity = scan_workspace(tmp_path, "2026-01-01", "2026-12-31")
         scaffold = build_scaffold(activity, "2026-02-28")
         assert "---" in scaffold
-        assert "## What I Did" in scaffold
+        assert "## The Voices" in scaffold
 
     def test_empty_json_is_valid(self, tmp_path):
         activity = scan_workspace(tmp_path, "2026-01-01", "2026-12-31")

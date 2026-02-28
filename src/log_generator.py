@@ -351,21 +351,26 @@ links:{links_yaml}
                 messages += f", ... (+{count - 3} more)"
             body += f"- **{repo_name}** ({count} commits): {messages}\n"
 
-    # Narrative sections
+    # Polyvocal narrative sections
     body += """
 ---
 
-## What I Did
+## The Voices
 
-<!-- Write your narrative here -->
+> <!-- The mediator. What actually happened — the decisions, the tradeoffs, the practical shape of the day. Reference the commits above. -->
+> — *Ego*
 
-## What I Learned
+> <!-- The raw nerve. What you wanted, what felt good, what frustrated you. The visceral truth under the commit messages. -->
+> — *Id*
 
-<!-- Write your reflection here -->
+> <!-- The critic and the conscience. What should have been done differently. The standard you're holding yourself to. -->
+> — *Superego*
 
-## What's Next
+> <!-- Intuition, the felt sense. What's emerging that you can't yet name. The creative undercurrent. -->
+> — *Anima*
 
-<!-- Write your forward-looking items here -->
+> <!-- Drive and structure. The analytical thread — where this trajectory leads, what the pattern means. -->
+> — *Animus*
 """
 
     return frontmatter + body
