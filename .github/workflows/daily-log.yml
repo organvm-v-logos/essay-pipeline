@@ -31,7 +31,7 @@ jobs:
 
       - name: Generate captain's log
         env:
-          GITHUB_TOKEN: ${{ secrets.CROSS_ORG_DISPATCH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python -m src.log_generator \
             --mode github-api \
