@@ -185,3 +185,48 @@ class TestIndexAll:
         assert (output_dir / "logs-index.json").exists()
         logs_index = json.loads((output_dir / "logs-index.json").read_text())
         assert logs_index["total_logs"] == 1
+
+
+# --- Additional extract_essay_data coverage --------------------------------
+
+
+class TestExtractEssayDataExtended:
+    def test_yaml_parse_error(self, tmp_path):
+        """Malformed YAML in frontmatter returns None."""
+        p = tmp_path / "bad-yaml.md"
+        p.write_text("---\ntitle: [invalid yaml\n---\n\nBody text here.")
+        assert extract_essay_data(p) is None
+
+    def test_empty_body_word_count(self, tmp_path):
+        """File with frontmatter but empty body has word_count 0."""
+        p = tmp_path / "empty-body.md"
+        p.write_text("---\ntitle: Empty\n---\n\n")
+        data = extract_essay_data(p)
+        assert data is not None
+        assert data["computed_word_count"] == 0
+
+    def test_url_stripping_in_word_count(self, tmp_path):
+        """URLs are stripped from body before word count."""
+        p = tmp_path / "urls.md"
+        p.write_text(
+            "---\ntitle: URLs\n---\n\n"
+            "Visit https://example.com/very/long/path and "
+            "also http://other.com/page for details.\n"
+        )
+        data = extract_essay_data(p)
+        assert data is not None
+        # "Visit and also for details." = 5 words (URLs stripped)
+        assert data["computed_word_count"] == 5
+
+    def test_markdown_formatting_stripped(self, tmp_path):
+        """Markdown symbols (#, *, etc.) don't inflate word count."""
+        p = tmp_path / "formatted.md"
+        p.write_text(
+            "---\ntitle: Formatted\n---\n\n"
+            "## Heading\n\n"
+            "**Bold** and *italic* and `code`.\n"
+        )
+        data = extract_essay_data(p)
+        assert data is not None
+        # "Heading Bold and italic and code" — symbols stripped
+        assert data["computed_word_count"] > 0

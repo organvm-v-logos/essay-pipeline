@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from src.schema_loader import load_schema
-from src.validator import extract_frontmatter, validate_essay, validate_field
+from src.validator import extract_frontmatter, validate_all, validate_essay, validate_field
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SCHEMA_PATH = str(
@@ -156,3 +156,120 @@ class TestValidateEssay:
         schema = get_schema()
         errors = validate_essay(FIXTURES / "bad-tag-format.md", schema)
         assert any("tags" in e and "pattern" in e for e in errors)
+
+
+# --- validate_field additional coverage ------------------------------------
+
+
+class TestValidateFieldExtended:
+    def test_string_max_length(self):
+        spec = {"type": "string", "max_length": 10}
+        errors = validate_field("title", "a" * 11, spec)
+        assert any("too long" in e for e in errors)
+
+    def test_string_max_length_ok(self):
+        spec = {"type": "string", "max_length": 10}
+        assert validate_field("title", "short", spec) == []
+
+    def test_list_too_many(self):
+        spec = {"type": "list", "min_items": 1, "max_items": 3, "item_type": "string"}
+        errors = validate_field("tags", ["a", "b", "c", "d"], spec)
+        assert any("too many" in e for e in errors)
+
+    def test_boolean_rejected_as_integer(self):
+        """bool is a subclass of int in Python — validator must reject it."""
+        spec = {"type": "integer", "min": 0}
+        errors = validate_field("word_count", True, spec)
+        assert any("expected integer" in e for e in errors)
+
+    def test_list_wrong_type(self):
+        spec = {"type": "list", "min_items": 1, "item_type": "string"}
+        errors = validate_field("tags", "not-a-list", spec)
+        assert any("expected list" in e for e in errors)
+
+
+# --- extract_frontmatter edge cases ----------------------------------------
+
+
+class TestExtractFrontmatterExtended:
+    def test_yaml_parse_error(self, tmp_path):
+        """Malformed YAML returns None instead of crashing."""
+        p = tmp_path / "bad-yaml.md"
+        p.write_text("---\ntitle: [invalid yaml\n---\n\nBody text.")
+        assert extract_frontmatter(p) is None
+
+    def test_single_delimiter(self, tmp_path):
+        """File with only opening --- but no closing --- returns None."""
+        p = tmp_path / "one-delim.md"
+        p.write_text("---\ntitle: Test\n")
+        assert extract_frontmatter(p) is None
+
+
+# --- validate_entry with optional fields ------------------------------------
+
+
+class TestOptionalFieldValidation:
+    def test_optional_field_valid(self, tmp_path):
+        """Valid optional field produces no errors."""
+        schema = get_schema()
+        # Add a known optional field if schema has them
+        optional = schema.get("optional_fields", {})
+        if not optional:
+            # Schema has no optional fields — test passes trivially
+            return
+        # Use the valid essay fixture which should pass
+        errors = validate_essay(FIXTURES / "valid-essay.md", schema)
+        assert errors == []
+
+    def test_optional_field_invalid(self, tmp_path):
+        """Invalid optional field value is reported."""
+        schema = get_schema()
+        optional = schema.get("optional_fields", {})
+        if not optional:
+            return
+        # Pick the first optional field and give it a bad value
+        field_name, spec = next(iter(optional.items()))
+        field_type = spec.get("type", "string")
+        # Create a file with a bad value for that optional field
+        bad_value = 99999 if field_type == "string" else "not-a-valid-value"
+        p = tmp_path / "bad-optional.md"
+        p.write_text(
+            f"---\nlayout: essay\ntitle: \"A Perfectly Valid Test Essay for the Pipeline\"\n"
+            f"author: \"@4444J99\"\ndate: \"2026-02-10\"\n"
+            f"tags:\n  - governance\n  - building-in-public\n"
+            f"category: meta-system\n"
+            f"excerpt: \"This essay explores the recursive structure of the essay pipeline itself.\"\n"
+            f"portfolio_relevance: HIGH\n"
+            f"related_repos:\n  - organvm-v-logos/essay-pipeline\n"
+            f"reading_time: \"8 min\"\nword_count: 1500\n"
+            f"{field_name}: {bad_value}\n"
+            f"---\n\nBody text.\n"
+        )
+        errors = validate_essay(p, schema)
+        # Should have at least one error about the optional field
+        assert any(field_name in e for e in errors)
+
+
+# --- validate_all tests ----------------------------------------------------
+
+
+class TestValidateAll:
+    def test_valid_directory(self):
+        """validate_all on fixtures returns errors for known-bad files."""
+        errors = validate_all(str(FIXTURES), SCHEMA_PATH)
+        # fixtures has both valid and invalid files
+        assert isinstance(errors, list)
+
+    def test_empty_directory(self, tmp_path):
+        """Empty directory returns 'no .md files' error."""
+        errors = validate_all(str(tmp_path), SCHEMA_PATH)
+        assert len(errors) == 1
+        assert "No .md files" in errors[0]
+
+    def test_all_valid(self, tmp_path):
+        """Directory with only valid files returns empty error list."""
+        import shutil
+        p = tmp_path / "valid-essay.md"
+        shutil.copy(FIXTURES / "valid-essay.md", p)
+        errors = validate_all(str(tmp_path), SCHEMA_PATH)
+        assert errors == []

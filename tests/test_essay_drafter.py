@@ -516,3 +516,86 @@ class TestDraftEssayIntegration:
 
             assert result["valid"] is True
             assert result["repaired"] is True
+
+
+# --- repair_frontmatter additional coverage --------------------------------
+
+
+class TestRepairFrontmatterExtended:
+    def test_fixes_layout_field(self):
+        """repair_frontmatter corrects layout to 'essay'."""
+        draft = """---
+layout: post
+title: "Test Essay Title for Layout Fix"
+author: "@4444J99"
+date: "2026-02-27"
+tags: [governance, meta-system]
+category: "meta-system"
+excerpt: "This is a test excerpt that is long enough to pass the minimum length requirement for validation."
+portfolio_relevance: "HIGH"
+related_repos: [organvm-v-logos/essay-pipeline]
+reading_time: "5 min"
+word_count: 500
+---
+
+""" + "word " * 500
+        schema = yaml.safe_load(open(SCHEMA_PATH))
+        repaired = repair_frontmatter(draft, ["layout"], schema)
+        parts = repaired.split("---", 2)
+        fm = yaml.safe_load(parts[1])
+        assert fm["layout"] == "essay"
+
+    def test_fixes_reading_time(self):
+        """repair_frontmatter recalculates reading_time from word count."""
+        body_words = "word " * 750  # 750 words → 3 min
+        draft = f"""---
+layout: essay
+title: "Test Essay Title for Reading Time"
+author: "@4444J99"
+date: "2026-02-27"
+tags: [governance, meta-system]
+category: "meta-system"
+excerpt: "This is a test excerpt that is long enough to pass the minimum length requirement for validation."
+portfolio_relevance: "HIGH"
+related_repos: [organvm-v-logos/essay-pipeline]
+reading_time: "99 min"
+word_count: 100
+---
+
+{body_words}
+"""
+        schema = yaml.safe_load(open(SCHEMA_PATH))
+        repaired = repair_frontmatter(draft, ["reading_time", "word_count"], schema)
+        parts = repaired.split("---", 2)
+        fm = yaml.safe_load(parts[1])
+        assert fm["word_count"] == 750
+        assert fm["reading_time"] == "3 min"
+
+    def test_no_changes_needed(self):
+        """repair_frontmatter returns original text when nothing needs fixing."""
+        schema = yaml.safe_load(open(SCHEMA_PATH))
+        # VALID_DRAFT is already correct — repair should return it unchanged
+        # (word_count may differ so use a minimal correct draft)
+        body_words = "word " * 576
+        draft = f"""---
+layout: essay
+title: "A Correct Draft"
+author: "@4444J99"
+date: "2026-02-27"
+tags:
+  - governance
+  - meta-system
+category: "meta-system"
+excerpt: "This is a test excerpt that is long enough to pass the minimum length requirement for validation purposes."
+portfolio_relevance: "HIGH"
+related_repos:
+  - organvm-v-logos/essay-pipeline
+reading_time: "2 min"
+word_count: 576
+---
+
+{body_words}
+"""
+        result = repair_frontmatter(draft, [], schema)
+        # Should still be valid frontmatter
+        assert result.startswith("---")

@@ -8,6 +8,8 @@ from unittest.mock import patch
 
 from src.log_generator import (
     ORG_TO_ORGAN,
+    _anchor_date,
+    _format_date_display,
     build_json_output,
     build_scaffold,
     detect_organ,
@@ -19,6 +21,7 @@ from src.log_generator import (
     normalize_github_url,
     scan_github_orgs,
     scan_workspace,
+    write_outputs,
 )
 
 
@@ -430,7 +433,6 @@ class TestIntegration:
 
         activity = scan_workspace(tmp_path, "1970-01-01", "2099-12-31")
 
-        from src.log_generator import write_outputs
         json_path, scaffold_path = write_outputs(
             activity, logs_dir, data_dir, "2026-02-28"
         )
@@ -515,3 +517,91 @@ class TestScanGithubOrgs:
             "ghp_test", ["organvm-v-logos"], "2026-02-19", "2026-02-21"  # allow-secret
         )
         assert activity["summary"]["total_commits"] == 1
+
+
+# --- _anchor_date tests ---------------------------------------------------
+
+
+class TestAnchorDate:
+    def test_bare_date_gets_anchor(self):
+        assert _anchor_date("2026-02-28") == "2026-02-28T00:00:00"
+
+    def test_already_anchored_unchanged(self):
+        assert _anchor_date("2026-02-28T10:30:00") == "2026-02-28T10:30:00"
+
+    def test_non_date_string_unchanged(self):
+        assert _anchor_date("yesterday") == "yesterday"
+
+
+# --- _format_date_display tests -------------------------------------------
+
+
+class TestFormatDateDisplay:
+    def test_valid_date(self):
+        assert _format_date_display("2026-02-28") == "Feb 28, 2026"
+
+    def test_invalid_date_returned_as_is(self):
+        assert _format_date_display("not-a-date") == "not-a-date"
+
+    def test_another_valid_date(self):
+        assert _format_date_display("2026-01-01") == "Jan 01, 2026"
+
+
+# --- write_outputs skip-existing tests ------------------------------------
+
+
+class TestWriteOutputsSkipExisting:
+    def _make_minimal_activity(self):
+        return {
+            "generated": "2026-02-28T20:00:00Z",
+            "since": "2026-02-27",
+            "until": "2026-02-28",
+            "summary": {
+                "total_commits": 1,
+                "repos_active": 1,
+                "files_changed": 1,
+                "organs_touched": ["V"],
+            },
+            "by_organ": {
+                "V": {
+                    "name": "Logos",
+                    "repos": {
+                        "test-repo": {
+                            "commits": [{"hash": "abc1234", "date": "2026-02-27", "message": "feat: test"}],
+                            "files_changed": 1,
+                        },
+                    },
+                },
+            },
+            "_links": [],
+            "_all_commits": [{"hash": "abc1234", "date": "2026-02-27", "message": "feat: test"}],
+        }
+
+    def test_skip_existing_scaffold(self, tmp_path):
+        """write_outputs does not overwrite existing scaffold file."""
+        logs_dir = tmp_path / "logs"
+        data_dir = tmp_path / "data"
+        activity = self._make_minimal_activity()
+
+        # First write
+        _, scaffold_path = write_outputs(activity, logs_dir, data_dir, "2026-02-28")
+        original_content = scaffold_path.read_text()
+
+        # Second write — scaffold should NOT be overwritten
+        write_outputs(activity, logs_dir, data_dir, "2026-02-28")
+        assert scaffold_path.read_text() == original_content
+
+    def test_json_always_written(self, tmp_path):
+        """JSON output is always overwritten (not skipped)."""
+        logs_dir = tmp_path / "logs"
+        data_dir = tmp_path / "data"
+        activity = self._make_minimal_activity()
+
+        json_path, _ = write_outputs(activity, logs_dir, data_dir, "2026-02-28")
+        assert json_path.exists()
+
+        # Modify activity and rewrite
+        activity["summary"]["total_commits"] = 99
+        json_path2, _ = write_outputs(activity, logs_dir, data_dir, "2026-02-28")
+        data = json.loads(json_path2.read_text())
+        assert data["summary"]["total_commits"] == 99
