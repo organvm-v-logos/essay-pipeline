@@ -20,6 +20,7 @@ jobs:
         with:
           repository: organvm-v-logos/public-process
           path: public-process
+          token: ${{ secrets.CROSS_ORG_DISPATCH_TOKEN || secrets.ORCHESTRATION_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -40,12 +41,18 @@ jobs:
 
       - name: Create PR in public-process
         env:
-          GH_TOKEN: ${{ secrets.CROSS_ORG_DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ secrets.CROSS_ORG_DISPATCH_TOKEN || secrets.ORCHESTRATION_PAT || secrets.GITHUB_TOKEN }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::No cross-org token available; skipping PR creation."
+            exit 0
+          fi
+
           TODAY=$(date -u +%Y-%m-%d)
           BRANCH_NAME="auto-log/$TODAY"
 
           cd public-process
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/organvm-v-logos/public-process.git"
 
           # Check if there are changes
           if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
