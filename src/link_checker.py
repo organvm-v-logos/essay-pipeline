@@ -99,12 +99,14 @@ def extract_urls(filepath: Path) -> list[UrlEntry]:
             url = match.group(2).strip()
             if not _should_skip(url) and url not in seen_urls:
                 seen_urls.add(url)
-                entries.append(UrlEntry(
-                    url=url,
-                    file=filename,
-                    line=line_num,
-                    context=line.strip()[:120],
-                ))
+                entries.append(
+                    UrlEntry(
+                        url=url,
+                        file=filename,
+                        line=line_num,
+                        context=line.strip()[:120],
+                    )
+                )
 
         # Then standard markdown links
         for match in _MD_LINK_RE.finditer(line):
@@ -115,12 +117,14 @@ def extract_urls(filepath: Path) -> list[UrlEntry]:
             url = raw
             if not _should_skip(url) and url not in seen_urls:
                 seen_urls.add(url)
-                entries.append(UrlEntry(
-                    url=url,
-                    file=filename,
-                    line=line_num,
-                    context=line.strip()[:120],
-                ))
+                entries.append(
+                    UrlEntry(
+                        url=url,
+                        file=filename,
+                        line=line_num,
+                        context=line.strip()[:120],
+                    )
+                )
 
     return entries
 
@@ -201,7 +205,9 @@ def _check_url_inner(
                 if redirect_url:
                     try:
                         _rate_limit(redirect_url)
-                        target_resp = client.request("HEAD", redirect_url, timeout=timeout)
+                        target_resp = client.request(
+                            "HEAD", redirect_url, timeout=timeout
+                        )
                         if target_resp.status_code < 400:
                             return UrlResult(
                                 url=url,

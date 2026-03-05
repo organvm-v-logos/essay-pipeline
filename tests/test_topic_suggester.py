@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 from src.topic_suggester import (
     extract_surfaced_topics,
@@ -10,7 +11,39 @@ from src.topic_suggester import (
     find_underused_tags,
     generate_suggestions,
     suggest_all,
+    main,
 )
+
+
+class TestTopicSuggesterMain:
+    @patch("src.topic_suggester.suggest_all")
+    @patch("sys.exit")
+    def test_main_runs(self, mock_exit, mock_suggest, tmp_path):
+        mock_suggest.return_value = {"total_suggestions": 5}
+        output = tmp_path / "suggestions.json"
+        with patch(
+            "sys.argv",
+            [
+                "prog",
+                "--essays-index",
+                "idx",
+                "--xrefs",
+                "xr",
+                "--tag-governance",
+                "tag",
+                "--category-taxonomy",
+                "cat",
+                "--surfaced",
+                "surf",
+                "--output",
+                str(output),
+            ],
+        ):
+            main()
+
+        assert output.exists()
+        mock_exit.assert_called_with(0)
+
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -80,7 +113,14 @@ class TestExtractSurfacedTopics:
         assert extract_surfaced_topics([]) == []
 
     def test_preserves_fields(self):
-        surfaced = [{"title": "Test", "url": "http://x", "matched_collections": ["a"], "score": 0.9}]
+        surfaced = [
+            {
+                "title": "Test",
+                "url": "http://x",
+                "matched_collections": ["a"],
+                "score": 0.9,
+            }
+        ]
         result = extract_surfaced_topics(surfaced)
         assert result[0]["title"] == "Test"
         assert result[0]["url"] == "http://x"
@@ -111,8 +151,22 @@ class TestFindCrossReferenceGaps:
 class TestGenerateSuggestions:
     def test_combines_all_sources(self):
         underused = [{"tag": "game-design", "current_count": 1}]
-        underserved = [{"category": "retrospective", "current_count": 2, "typical_count": 4, "deficit": 2}]
-        surfaced = [{"title": "Article", "url": "http://x", "matched_collections": ["a"], "score": 0.8}]
+        underserved = [
+            {
+                "category": "retrospective",
+                "current_count": 2,
+                "typical_count": 4,
+                "deficit": 2,
+            }
+        ]
+        surfaced = [
+            {
+                "title": "Article",
+                "url": "http://x",
+                "matched_collections": ["a"],
+                "score": 0.8,
+            }
+        ]
         orphans = [{"filename": "orphan.md", "title": "Orphan Essay"}]
 
         result = generate_suggestions(underused, underserved, surfaced, orphans)
@@ -139,7 +193,9 @@ class TestGenerateSuggestions:
 
     def test_priority_assignments(self):
         underused = [{"tag": "t", "current_count": 0}]
-        underserved = [{"category": "c", "current_count": 0, "typical_count": 5, "deficit": 5}]
+        underserved = [
+            {"category": "c", "current_count": 0, "typical_count": 5, "deficit": 5}
+        ]
         surfaced = [{"title": "A", "url": "u", "matched_collections": [], "score": 0.5}]
         orphans = [{"filename": "f.md", "title": "T"}]
         result = generate_suggestions(underused, underserved, surfaced, orphans)

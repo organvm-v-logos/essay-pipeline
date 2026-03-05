@@ -80,11 +80,13 @@ def _init_test_repo(path: Path, commits: list[tuple[str, str]] | None = None):
     subprocess.run(["git", "init"], cwd=path, capture_output=True)
     subprocess.run(
         ["git", "config", "user.email", "test@test.com"],
-        cwd=path, capture_output=True,
+        cwd=path,
+        capture_output=True,
     )
     subprocess.run(
         ["git", "config", "user.name", "Test"],
-        cwd=path, capture_output=True,
+        cwd=path,
+        capture_output=True,
     )
     if commits:
         for filename, message in commits:
@@ -92,7 +94,8 @@ def _init_test_repo(path: Path, commits: list[tuple[str, str]] | None = None):
             subprocess.run(["git", "add", filename], cwd=path, capture_output=True)
             subprocess.run(
                 ["git", "commit", "-m", message],
-                cwd=path, capture_output=True,
+                cwd=path,
+                capture_output=True,
             )
 
 
@@ -100,10 +103,13 @@ class TestCommitParsing:
     def test_parses_commits(self, tmp_path):
         repo = tmp_path / "repo"
         repo.mkdir()
-        _init_test_repo(repo, [
-            ("a.txt", "feat: add feature A"),
-            ("b.txt", "fix: resolve bug B"),
-        ])
+        _init_test_repo(
+            repo,
+            [
+                ("a.txt", "feat: add feature A"),
+                ("b.txt", "fix: resolve bug B"),
+            ],
+        )
         commits = git_log(repo, "1970-01-01", "2099-12-31")
         assert len(commits) == 2
         # Most recent first
@@ -126,10 +132,13 @@ class TestCommitParsing:
     def test_files_changed(self, tmp_path):
         repo = tmp_path / "repo"
         repo.mkdir()
-        _init_test_repo(repo, [
-            ("file1.txt", "feat: add file1"),
-            ("file2.txt", "feat: add file2"),
-        ])
+        _init_test_repo(
+            repo,
+            [
+                ("file1.txt", "feat: add file1"),
+                ("file2.txt", "feat: add file2"),
+            ],
+        )
         count = git_files_changed(repo, "1970-01-01", "2099-12-31")
         assert count == 2
 
@@ -144,7 +153,9 @@ class TestGitHubUrlInference:
         assert url == "https://github.com/organvm-v-logos/essay-pipeline"
 
     def test_https_url(self):
-        url = normalize_github_url("https://github.com/organvm-v-logos/essay-pipeline.git")
+        url = normalize_github_url(
+            "https://github.com/organvm-v-logos/essay-pipeline.git"
+        )
         assert url == "https://github.com/organvm-v-logos/essay-pipeline"
 
     def test_https_url_no_git_suffix(self):
@@ -205,7 +216,11 @@ class TestScaffoldFrontmatter:
                     "repos": {
                         "public-process": {
                             "commits": [
-                                {"hash": "abc1234", "date": "2026-02-27", "message": "fix: something"},
+                                {
+                                    "hash": "abc1234",
+                                    "date": "2026-02-27",
+                                    "message": "fix: something",
+                                },
                             ],
                             "files_changed": 2,
                         },
@@ -216,8 +231,16 @@ class TestScaffoldFrontmatter:
                     "repos": {
                         "some-tool": {
                             "commits": [
-                                {"hash": "def5678", "date": "2026-02-27", "message": "feat: add thing"},
-                                {"hash": "ghi9012", "date": "2026-02-27", "message": "chore: cleanup"},
+                                {
+                                    "hash": "def5678",
+                                    "date": "2026-02-27",
+                                    "message": "feat: add thing",
+                                },
+                                {
+                                    "hash": "ghi9012",
+                                    "date": "2026-02-27",
+                                    "message": "chore: cleanup",
+                                },
                             ],
                             "files_changed": 8,
                         },
@@ -244,7 +267,7 @@ class TestScaffoldFrontmatter:
     def test_contains_required_frontmatter_fields(self):
         activity = self._make_activity()
         scaffold = build_scaffold(activity, "2026-02-28")
-        assert 'layout: log' in scaffold
+        assert "layout: log" in scaffold
         assert 'title: ""' in scaffold
         assert 'date: "2026-02-28"' in scaffold
         assert "mood:" in scaffold
@@ -408,10 +431,13 @@ class TestIntegration:
         organ_dir.mkdir()
         repo_dir = organ_dir / "test-repo"
         repo_dir.mkdir()
-        _init_test_repo(repo_dir, [
-            ("file1.py", "feat: add feature"),
-            ("file2.py", "fix: resolve issue"),
-        ])
+        _init_test_repo(
+            repo_dir,
+            [
+                ("file1.py", "feat: add feature"),
+                ("file2.py", "fix: resolve issue"),
+            ],
+        )
 
         activity = scan_workspace(tmp_path, "1970-01-01", "2099-12-31")
         assert activity["summary"]["total_commits"] == 2
@@ -453,9 +479,14 @@ class TestIntegration:
 class TestOrgToOrganMapping:
     def test_all_orgs_present(self):
         expected_orgs = {
-            "ivviiviivvi", "omni-dromenon-machina", "labores-profani-crux",
-            "organvm-iv-taxis", "organvm-v-logos", "organvm-vi-koinonia",
-            "organvm-vii-kerygma", "meta-organvm",
+            "ivviiviivvi",
+            "omni-dromenon-machina",
+            "labores-profani-crux",
+            "organvm-iv-taxis",
+            "organvm-v-logos",
+            "organvm-vi-koinonia",
+            "organvm-vii-kerygma",
+            "meta-organvm",
         }
         assert set(ORG_TO_ORGAN.keys()) == expected_orgs
 
@@ -481,7 +512,10 @@ class TestScanGithubOrgs:
             },
         ]
         activity = scan_github_orgs(
-            "ghp_test", ["organvm-v-logos"], "2026-02-19", "2026-02-21"  # allow-secret
+            "ghp_test",
+            ["organvm-v-logos"],
+            "2026-02-19",
+            "2026-02-21",  # allow-secret
         )
         assert activity["summary"]["total_commits"] == 1
         assert activity["summary"]["repos_active"] == 1
@@ -492,7 +526,10 @@ class TestScanGithubOrgs:
     def test_handles_api_error(self, mock_api):
         mock_api.side_effect = urllib.error.URLError("Connection refused")
         activity = scan_github_orgs(
-            "ghp_test", ["organvm-v-logos"], "2026-02-19", "2026-02-21"  # allow-secret
+            "ghp_test",
+            ["organvm-v-logos"],
+            "2026-02-19",
+            "2026-02-21",  # allow-secret
         )
         assert activity["summary"]["total_commits"] == 0
         assert activity["by_organ"] == {}
@@ -514,7 +551,10 @@ class TestScanGithubOrgs:
             },
         ]
         activity = scan_github_orgs(
-            "ghp_test", ["organvm-v-logos"], "2026-02-19", "2026-02-21"  # allow-secret
+            "ghp_test",
+            ["organvm-v-logos"],
+            "2026-02-19",
+            "2026-02-21",  # allow-secret
         )
         assert activity["summary"]["total_commits"] == 1
 
@@ -567,14 +607,22 @@ class TestWriteOutputsSkipExisting:
                     "name": "Logos",
                     "repos": {
                         "test-repo": {
-                            "commits": [{"hash": "abc1234", "date": "2026-02-27", "message": "feat: test"}],
+                            "commits": [
+                                {
+                                    "hash": "abc1234",
+                                    "date": "2026-02-27",
+                                    "message": "feat: test",
+                                }
+                            ],
                             "files_changed": 1,
                         },
                     },
                 },
             },
             "_links": [],
-            "_all_commits": [{"hash": "abc1234", "date": "2026-02-27", "message": "feat: test"}],
+            "_all_commits": [
+                {"hash": "abc1234", "date": "2026-02-27", "message": "feat: test"}
+            ],
         }
 
     def test_skip_existing_scaffold(self, tmp_path):

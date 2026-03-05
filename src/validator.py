@@ -96,8 +96,14 @@ def validate_field(field_name: str, value, spec: dict) -> list[str]:
         for i, item in enumerate(value):
             if item_type == "string" and not isinstance(item, str):
                 errors.append(f"item [{i}] expected string, got {type(item).__name__}")
-            elif item_pattern and isinstance(item, str) and not re.match(item_pattern, item):
-                errors.append(f"item [{i}] '{item}' does not match pattern {item_pattern}")
+            elif (
+                item_pattern
+                and isinstance(item, str)
+                and not re.match(item_pattern, item)
+            ):
+                errors.append(
+                    f"item [{i}] '{item}' does not match pattern {item_pattern}"
+                )
 
     return errors
 
@@ -134,7 +140,11 @@ def validate_entry(filepath: Path, schema: dict) -> list[str]:
                 errors.append(f"{filepath.name}: field '{field_name}' — {err}")
 
     # Cross-field integrity checks for word_count/reading_time coherence
-    if isinstance(fm, dict) and isinstance(fm.get("word_count"), int) and not isinstance(fm.get("word_count"), bool):
+    if (
+        isinstance(fm, dict)
+        and isinstance(fm.get("word_count"), int)
+        and not isinstance(fm.get("word_count"), bool)
+    ):
         declared_word_count = fm["word_count"]
         word_count_policy = fm.get("word_count_policy", "computed")
         if word_count_policy not in {"computed", "external"}:
@@ -151,7 +161,9 @@ def validate_entry(filepath: Path, schema: dict) -> list[str]:
                         "when word_count_policy is 'external'"
                     )
             else:
-                computed_word_count = _compute_body_word_count(filepath.read_text(encoding="utf-8"))
+                computed_word_count = _compute_body_word_count(
+                    filepath.read_text(encoding="utf-8")
+                )
                 if declared_word_count != computed_word_count:
                     errors.append(
                         f"{filepath.name}: field 'word_count' — declared {declared_word_count} does not "
@@ -192,11 +204,17 @@ def validate_all(posts_dir: str, schema_path: str) -> list[str]:
 
 def main():
     parser = argparse.ArgumentParser(description="Validate content frontmatter")
-    parser.add_argument("--posts-dir", required=True, help="Path to content directory (_posts/ or _logs/)")
+    parser.add_argument(
+        "--posts-dir",
+        required=True,
+        help="Path to content directory (_posts/ or _logs/)",
+    )
     parser.add_argument("--schema", required=True, help="Path to schema YAML file")
     parser.add_argument(
-        "--content-type", choices=["essay", "log"], default="essay",
-        help="Content type being validated (default: essay)"
+        "--content-type",
+        choices=["essay", "log"],
+        default="essay",
+        help="Content type being validated (default: essay)",
     )
     args = parser.parse_args()
 

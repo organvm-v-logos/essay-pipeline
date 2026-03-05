@@ -20,7 +20,10 @@ class TestExtractEssayData:
         data = extract_essay_data(FIXTURES / "valid-essay.md")
         assert data is not None
         assert data["filename"] == "valid-essay.md"
-        assert data["frontmatter"]["title"] == "A Perfectly Valid Test Essay for the Pipeline"
+        assert (
+            data["frontmatter"]["title"]
+            == "A Perfectly Valid Test Essay for the Pipeline"
+        )
         assert data["computed_word_count"] > 0
 
     def test_no_frontmatter_returns_none(self, tmp_path):
@@ -72,8 +75,15 @@ class TestBuildCrossReferences:
         assert "organvm-v-logos/essay-pipeline" in entry["related_repos"]
 
 
-def _make_essay(filename: str, title: str, dt: str, category: str = "meta-system",
-                tags: list | None = None, mood: str = "", organs: list | None = None) -> dict:
+def _make_essay(
+    filename: str,
+    title: str,
+    dt: str,
+    category: str = "meta-system",
+    tags: list | None = None,
+    mood: str = "",
+    organs: list | None = None,
+) -> dict:
     """Helper to build a minimal essay/log data dict for testing."""
     return {
         "filename": filename,
@@ -120,8 +130,15 @@ class TestBuildPublicationCalendar:
 
 class TestBuildLogsIndex:
     def test_basic_structure(self):
-        logs = [_make_essay("log1.md", "Log 1", "2026-02-10", mood="focused",
-                            tags=["governance", "feature"])]
+        logs = [
+            _make_essay(
+                "log1.md",
+                "Log 1",
+                "2026-02-10",
+                mood="focused",
+                tags=["governance", "feature"],
+            )
+        ]
         index = build_logs_index(logs)
         assert index["total_logs"] == 1
         assert index["total_words"] == 500
@@ -149,19 +166,20 @@ class TestIndexAll:
     def _write_fixture(self, path: Path, title: str, dt: str) -> None:
         """Write a minimal valid essay file."""
         path.write_text(
-            f"---\nlayout: essay\ntitle: \"{title}\"\nauthor: \"@test\"\n"
-            f"date: \"{dt}\"\ntags:\n  - governance\n  - testing\n"
-            f"category: meta-system\nexcerpt: \"A test essay for pipeline validation.\"\n"
+            f'---\nlayout: essay\ntitle: "{title}"\nauthor: "@test"\n'
+            f'date: "{dt}"\ntags:\n  - governance\n  - testing\n'
+            f'category: meta-system\nexcerpt: "A test essay for pipeline validation."\n'
             f"portfolio_relevance: HIGH\nrelated_repos:\n  - organvm-v-logos/test\n"
-            f"reading_time: \"5 min\"\nword_count: 500\n---\n\n"
-            + "Word " * 100 + "\n"
+            f'reading_time: "5 min"\nword_count: 500\n---\n\n' + "Word " * 100 + "\n"
         )
 
     def test_generates_all_json_files(self, tmp_path):
         posts_dir = tmp_path / "_posts"
         posts_dir.mkdir()
         output_dir = tmp_path / "data"
-        self._write_fixture(posts_dir / "2026-02-10-test.md", "Test Essay", "2026-02-10")
+        self._write_fixture(
+            posts_dir / "2026-02-10-test.md", "Test Essay", "2026-02-10"
+        )
 
         summary = index_all(str(posts_dir), str(output_dir))
         assert summary["essays"] == 1
@@ -176,7 +194,9 @@ class TestIndexAll:
         logs_dir = tmp_path / "_logs"
         logs_dir.mkdir()
         output_dir = tmp_path / "data"
-        self._write_fixture(posts_dir / "2026-02-10-test.md", "Test Essay", "2026-02-10")
+        self._write_fixture(
+            posts_dir / "2026-02-10-test.md", "Test Essay", "2026-02-10"
+        )
         self._write_fixture(logs_dir / "2026-02-11-log.md", "Log Entry", "2026-02-11")
 
         summary = index_all(str(posts_dir), str(output_dir), logs_dir=str(logs_dir))

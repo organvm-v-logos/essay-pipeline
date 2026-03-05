@@ -42,7 +42,9 @@ class TestAnthropicClient:
         assert client.configured is False
 
     def test_from_env(self):
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-test-123"}):  # allow-secret
+        with patch.dict(
+            os.environ, {"ANTHROPIC_API_KEY": "sk-test-123"}
+        ):  # allow-secret
             client = AnthropicClient.from_env()
             assert client.api_key == "sk-test-123"  # allow-secret
             assert client.configured is True
@@ -102,9 +104,7 @@ class TestGeminiClient:
     @patch("src.llm_client._http_post")
     def test_generate_parses_response(self, mock_post):
         mock_post.return_value = {
-            "candidates": [
-                {"content": {"parts": [{"text": "Gemini says hello"}]}}
-            ],
+            "candidates": [{"content": {"parts": [{"text": "Gemini says hello"}]}}],
             "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 8},
         }
         client = GeminiClient(api_key="AIza-test")  # allow-secret
@@ -184,10 +184,13 @@ class TestCreateClient:
                 assert "not configured" in str(e)
 
     def test_env_var_provider(self):
-        with patch.dict(os.environ, {
-            "LLM_PROVIDER": "openai",
-            "OPENAI_API_KEY": "sk-test",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "openai",
+                "OPENAI_API_KEY": "sk-test",
+            },
+        ):
             client = create_client()
             assert isinstance(client, OpenAIClient)
 
@@ -198,10 +201,14 @@ class TestCreateClient:
             assert isinstance(client, GeminiClient)
 
     def test_auto_detect_prefers_anthropic(self):
-        with patch.dict(os.environ, {
-            "ANTHROPIC_API_KEY": "sk-ant",
-            "OPENAI_API_KEY": "sk-oai",
-        }, clear=True):
+        with patch.dict(
+            os.environ,
+            {
+                "ANTHROPIC_API_KEY": "sk-ant",
+                "OPENAI_API_KEY": "sk-oai",
+            },
+            clear=True,
+        ):
             client = create_client()
             assert isinstance(client, AnthropicClient)
 
@@ -209,7 +216,11 @@ class TestCreateClient:
         with patch.dict(os.environ, {}, clear=True):
             # Ollama is always "configured" with default URL, so we
             # need to also disable that
-            with patch.object(OllamaClient, "configured", new_callable=lambda: property(lambda self: False)):
+            with patch.object(
+                OllamaClient,
+                "configured",
+                new_callable=lambda: property(lambda self: False),
+            ):
                 try:
                     create_client()
                     assert False, "Should have raised ValueError"

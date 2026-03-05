@@ -50,12 +50,14 @@ def find_underserved_categories(
         typical = cat_spec.get("typical_count", 0)
         current = categories.get(cat_name, 0)
         if current < typical:
-            underserved.append({
-                "category": cat_name,
-                "current_count": current,
-                "typical_count": typical,
-                "deficit": typical - current,
-            })
+            underserved.append(
+                {
+                    "category": cat_name,
+                    "current_count": current,
+                    "typical_count": typical,
+                    "deficit": typical - current,
+                }
+            )
     return underserved
 
 
@@ -68,12 +70,14 @@ def extract_surfaced_topics(surfaced: list[dict]) -> list[dict]:
     for item in surfaced:
         score = item.get("score", 0)
         if score > 0.4:
-            results.append({
-                "title": item.get("title", ""),
-                "url": item.get("url", ""),
-                "matched_collections": item.get("matched_collections", []),
-                "score": score,
-            })
+            results.append(
+                {
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "matched_collections": item.get("matched_collections", []),
+                    "score": score,
+                }
+            )
     return results
 
 
@@ -86,10 +90,12 @@ def find_cross_reference_gaps(xrefs: dict) -> list[dict]:
     orphans = []
     for filename, entry in entries.items():
         if not entry.get("related_repos"):
-            orphans.append({
-                "filename": filename,
-                "title": entry.get("title", ""),
-            })
+            orphans.append(
+                {
+                    "filename": filename,
+                    "title": entry.get("title", ""),
+                }
+            )
     return orphans
 
 
@@ -105,74 +111,82 @@ def generate_suggestions(
     for gap in underused_tags:
         tag = gap["tag"]
         title_tag = tag.replace("-", " ").title()
-        suggestions.append({
-            "type": "tag-gap",
-            "title": f"Exploring {title_tag}: Untapped Perspectives in the ORGANVM System",
-            "rationale": (
-                f"Tag '{tag}' appears in only {gap['current_count']} essay(s). "
-                f"Preferred tags should have broader coverage."
-            ),
-            "suggested_tags": [tag],
-            "suggested_category": "case-study",
-            "priority": "medium",
-            "source_data": {"tag": tag, "current_count": gap["current_count"]},
-        })
+        suggestions.append(
+            {
+                "type": "tag-gap",
+                "title": f"Exploring {title_tag}: Untapped Perspectives in the ORGANVM System",
+                "rationale": (
+                    f"Tag '{tag}' appears in only {gap['current_count']} essay(s). "
+                    f"Preferred tags should have broader coverage."
+                ),
+                "suggested_tags": [tag],
+                "suggested_category": "case-study",
+                "priority": "medium",
+                "source_data": {"tag": tag, "current_count": gap["current_count"]},
+            }
+        )
 
     for gap in underserved_categories:
         cat = gap["category"]
         title_cat = cat.replace("-", " ").title()
-        suggestions.append({
-            "type": "category-gap",
-            "title": f"New {title_cat}: Filling the {title_cat} Gap",
-            "rationale": (
-                f"Category '{cat}' has {gap['current_count']} essays but "
-                f"typical count is {gap['typical_count']} (deficit: {gap['deficit']})."
-            ),
-            "suggested_tags": [cat],
-            "suggested_category": cat,
-            "priority": "high",
-            "source_data": {
-                "category": cat,
-                "current_count": gap["current_count"],
-                "typical_count": gap["typical_count"],
-            },
-        })
+        suggestions.append(
+            {
+                "type": "category-gap",
+                "title": f"New {title_cat}: Filling the {title_cat} Gap",
+                "rationale": (
+                    f"Category '{cat}' has {gap['current_count']} essays but "
+                    f"typical count is {gap['typical_count']} (deficit: {gap['deficit']})."
+                ),
+                "suggested_tags": [cat],
+                "suggested_category": cat,
+                "priority": "high",
+                "source_data": {
+                    "category": cat,
+                    "current_count": gap["current_count"],
+                    "typical_count": gap["typical_count"],
+                },
+            }
+        )
 
     for topic in surfaced_topics:
         tags = topic.get("matched_collections", [])
-        suggestions.append({
-            "type": "surfaced-article",
-            "title": f"Response to: {topic['title']}",
-            "rationale": (
-                f"Surfaced article scored {topic['score']:.2f} against "
-                f"collection tags: {', '.join(tags) if tags else 'none'}."
-            ),
-            "suggested_tags": tags,
-            "suggested_category": "meta-system",
-            "priority": "high",
-            "source_data": {
-                "article_title": topic["title"],
-                "url": topic["url"],
-                "score": topic["score"],
-            },
-        })
+        suggestions.append(
+            {
+                "type": "surfaced-article",
+                "title": f"Response to: {topic['title']}",
+                "rationale": (
+                    f"Surfaced article scored {topic['score']:.2f} against "
+                    f"collection tags: {', '.join(tags) if tags else 'none'}."
+                ),
+                "suggested_tags": tags,
+                "suggested_category": "meta-system",
+                "priority": "high",
+                "source_data": {
+                    "article_title": topic["title"],
+                    "url": topic["url"],
+                    "score": topic["score"],
+                },
+            }
+        )
 
     for orphan in orphan_essays:
-        suggestions.append({
-            "type": "cross-ref-gap",
-            "title": f"Follow-up: Connecting '{orphan['title']}' to the Wider System",
-            "rationale": (
-                f"Essay '{orphan['filename']}' has no cross-organ references. "
-                f"A follow-up could connect it to other ORGANVM organs."
-            ),
-            "suggested_tags": ["cross-organ", "governance"],
-            "suggested_category": "meta-system",
-            "priority": "low",
-            "source_data": {
-                "filename": orphan["filename"],
-                "title": orphan["title"],
-            },
-        })
+        suggestions.append(
+            {
+                "type": "cross-ref-gap",
+                "title": f"Follow-up: Connecting '{orphan['title']}' to the Wider System",
+                "rationale": (
+                    f"Essay '{orphan['filename']}' has no cross-organ references. "
+                    f"A follow-up could connect it to other ORGANVM organs."
+                ),
+                "suggested_tags": ["cross-organ", "governance"],
+                "suggested_category": "meta-system",
+                "priority": "low",
+                "source_data": {
+                    "filename": orphan["filename"],
+                    "title": orphan["title"],
+                },
+            }
+        )
 
     return suggestions
 
@@ -223,12 +237,20 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate essay topic suggestions from corpus analysis"
     )
-    parser.add_argument("--essays-index", required=True, help="Path to essays-index.json")
+    parser.add_argument(
+        "--essays-index", required=True, help="Path to essays-index.json"
+    )
     parser.add_argument("--xrefs", required=True, help="Path to cross-references.json")
-    parser.add_argument("--tag-governance", required=True, help="Path to tag-governance.yaml")
-    parser.add_argument("--category-taxonomy", required=True, help="Path to category-taxonomy.yaml")
+    parser.add_argument(
+        "--tag-governance", required=True, help="Path to tag-governance.yaml"
+    )
+    parser.add_argument(
+        "--category-taxonomy", required=True, help="Path to category-taxonomy.yaml"
+    )
     parser.add_argument("--surfaced", required=True, help="Path to surfaced.json")
-    parser.add_argument("--output", required=True, help="Output path for topic-suggestions.json")
+    parser.add_argument(
+        "--output", required=True, help="Output path for topic-suggestions.json"
+    )
     args = parser.parse_args()
 
     result = suggest_all(

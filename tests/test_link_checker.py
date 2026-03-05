@@ -151,6 +151,7 @@ def _mock_transport(handler):
 
 def test_check_url_ok() -> None:
     """200 response → status 'ok'."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200)
 
@@ -162,6 +163,7 @@ def test_check_url_ok() -> None:
 
 def test_check_url_redirect() -> None:
     """301 response → status 'redirect'."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         if "old" in str(request.url):
             return httpx.Response(301, headers={"location": "https://example.com/new"})
@@ -176,6 +178,7 @@ def test_check_url_redirect() -> None:
 
 def test_check_url_broken() -> None:
     """404 response → status 'broken'."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404)
 
@@ -187,6 +190,7 @@ def test_check_url_broken() -> None:
 
 def test_check_url_timeout() -> None:
     """Timeout → status 'timeout'."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ReadTimeout("timed out")
 
@@ -235,14 +239,29 @@ def test_generate_report_json_structure() -> None:
     """Report has expected top-level keys and summary counts."""
     report = Report(
         entries=[
-            UrlEntry(url="https://a.com", file="a.md", line=1, context="[A](https://a.com)"),
-            UrlEntry(url="https://b.com", file="b.md", line=5, context="[B](https://b.com)"),
-            UrlEntry(url="https://c.com", file="c.md", line=10, context="[C](https://c.com)"),
+            UrlEntry(
+                url="https://a.com", file="a.md", line=1, context="[A](https://a.com)"
+            ),
+            UrlEntry(
+                url="https://b.com", file="b.md", line=5, context="[B](https://b.com)"
+            ),
+            UrlEntry(
+                url="https://c.com", file="c.md", line=10, context="[C](https://c.com)"
+            ),
         ],
         results={
-            "https://a.com": UrlResult(url="https://a.com", status="ok", status_code=200),
-            "https://b.com": UrlResult(url="https://b.com", status="broken", status_code=404, error="HTTP 404"),
-            "https://c.com": UrlResult(url="https://c.com", status="redirect", status_code=301, redirect_url="https://c.org"),
+            "https://a.com": UrlResult(
+                url="https://a.com", status="ok", status_code=200
+            ),
+            "https://b.com": UrlResult(
+                url="https://b.com", status="broken", status_code=404, error="HTTP 404"
+            ),
+            "https://c.com": UrlResult(
+                url="https://c.com",
+                status="redirect",
+                status_code=301,
+                redirect_url="https://c.org",
+            ),
         },
     )
 
@@ -276,7 +295,8 @@ def test_full_scan_fixture(tmp_path: Path) -> None:
     posts = tmp_path / "posts"
     posts.mkdir()
 
-    (posts / "2026-01-01-test.md").write_text("""\
+    (posts / "2026-01-01-test.md").write_text(
+        """\
 ---
 layout: essay
 title: "Test"
@@ -285,7 +305,9 @@ references:
 ---
 
 See [Site](https://example.com).
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200)
@@ -307,13 +329,16 @@ def test_internal_only_mode(tmp_path: Path) -> None:
     posts = tmp_path / "posts"
     posts.mkdir()
 
-    (posts / "2026-01-01-test.md").write_text("""\
+    (posts / "2026-01-01-test.md").write_text(
+        """\
 ---
 layout: essay
 ---
 
 See [Site](https://example.com) and [Other](https://other.com).
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     report = check_all(posts_dir=posts, internal_only=True)
     assert len(report.results) == 2
@@ -344,6 +369,7 @@ And a real link: [Site](https://example.com).
 
 def test_check_url_connection_error() -> None:
     """HTTP connection error → status 'error'."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("Connection refused")
 
@@ -360,21 +386,27 @@ def test_check_all_with_logs_dir(tmp_path: Path) -> None:
     logs = tmp_path / "logs"
     logs.mkdir()
 
-    (posts / "2026-01-01-essay.md").write_text("""\
+    (posts / "2026-01-01-essay.md").write_text(
+        """\
 ---
 layout: essay
 ---
 
 See [A](https://example.com/a).
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
-    (logs / "2026-01-02-log.md").write_text("""\
+    (logs / "2026-01-02-log.md").write_text(
+        """\
 ---
 layout: log
 ---
 
 See [B](https://example.com/b).
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     report = check_all(posts_dir=posts, logs_dir=logs, internal_only=True)
     urls = set(report.results.keys())
@@ -387,14 +419,26 @@ def test_generate_report_all_status_types() -> None:
     """Report correctly categorizes timeout and error statuses in broken list."""
     report = Report(
         entries=[
-            UrlEntry(url="https://a.com", file="a.md", line=1, context="[A](https://a.com)"),
-            UrlEntry(url="https://b.com", file="b.md", line=2, context="[B](https://b.com)"),
-            UrlEntry(url="https://c.com", file="c.md", line=3, context="[C](https://c.com)"),
+            UrlEntry(
+                url="https://a.com", file="a.md", line=1, context="[A](https://a.com)"
+            ),
+            UrlEntry(
+                url="https://b.com", file="b.md", line=2, context="[B](https://b.com)"
+            ),
+            UrlEntry(
+                url="https://c.com", file="c.md", line=3, context="[C](https://c.com)"
+            ),
         ],
         results={
-            "https://a.com": UrlResult(url="https://a.com", status="broken", status_code=404, error="HTTP 404"),
-            "https://b.com": UrlResult(url="https://b.com", status="timeout", error="timeout"),
-            "https://c.com": UrlResult(url="https://c.com", status="error", error="Connection refused"),
+            "https://a.com": UrlResult(
+                url="https://a.com", status="broken", status_code=404, error="HTTP 404"
+            ),
+            "https://b.com": UrlResult(
+                url="https://b.com", status="timeout", error="timeout"
+            ),
+            "https://c.com": UrlResult(
+                url="https://c.com", status="error", error="Connection refused"
+            ),
         },
     )
 
@@ -414,13 +458,16 @@ def test_cli_main_internal_only(tmp_path: Path) -> None:
     posts.mkdir()
     output_file = tmp_path / "report.json"
 
-    (posts / "2026-01-01-test.md").write_text("""\
+    (posts / "2026-01-01-test.md").write_text(
+        """\
 ---
 layout: essay
 ---
 
 See [Site](https://example.com).
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     from src.link_checker import main
     import sys
@@ -429,8 +476,10 @@ See [Site](https://example.com).
     try:
         sys.argv = [
             "link_checker",
-            "--posts-dir", str(posts),
-            "--output", str(output_file),
+            "--posts-dir",
+            str(posts),
+            "--output",
+            str(output_file),
             "--internal-only",
         ]
         main()

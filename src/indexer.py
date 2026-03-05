@@ -60,16 +60,18 @@ def build_essays_index(essays: list[dict]) -> dict:
             tags[tag] += 1
         wc = e["computed_word_count"]
         total_words += wc
-        entries.append({
-            "filename": e["filename"],
-            "title": fm.get("title", ""),
-            "date": fm.get("date", ""),
-            "category": cat,
-            "tags": fm.get("tags", []),
-            "word_count": wc,
-            "reading_time": fm.get("reading_time", ""),
-            "portfolio_relevance": fm.get("portfolio_relevance", ""),
-        })
+        entries.append(
+            {
+                "filename": e["filename"],
+                "title": fm.get("title", ""),
+                "date": fm.get("date", ""),
+                "category": cat,
+                "tags": fm.get("tags", []),
+                "word_count": wc,
+                "reading_time": fm.get("reading_time", ""),
+                "portfolio_relevance": fm.get("portfolio_relevance", ""),
+            }
+        )
 
     return {
         "version": "1.1",
@@ -102,7 +104,9 @@ def build_cross_references(essays: list[dict]) -> dict:
     }
 
 
-def build_publication_calendar(essays: list[dict], logs: list[dict] | None = None) -> dict:
+def build_publication_calendar(
+    essays: list[dict], logs: list[dict] | None = None
+) -> dict:
     """Build publication-calendar.json with content count by date."""
     essay_dates = Counter()
     for e in essays:
@@ -143,15 +147,17 @@ def build_logs_index(logs: list[dict]) -> dict:
             tags[tag] += 1
         wc = entry["computed_word_count"]
         total_words += wc
-        entries.append({
-            "filename": entry["filename"],
-            "title": fm.get("title", ""),
-            "date": fm.get("date", ""),
-            "mood": mood,
-            "tags": fm.get("tags", []),
-            "word_count": wc,
-            "organs_touched": fm.get("organs_touched", []),
-        })
+        entries.append(
+            {
+                "filename": entry["filename"],
+                "title": fm.get("title", ""),
+                "date": fm.get("date", ""),
+                "mood": mood,
+                "tags": fm.get("tags", []),
+                "word_count": wc,
+                "organs_touched": fm.get("organs_touched", []),
+            }
+        )
 
     return {
         "version": "1.0",
@@ -220,10 +226,16 @@ def index_all(posts_dir: str, output_dir: str, logs_dir: str | None = None) -> d
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Index content and generate data files")
+    parser = argparse.ArgumentParser(
+        description="Index content and generate data files"
+    )
     parser.add_argument("--posts-dir", required=True, help="Path to _posts/ directory")
-    parser.add_argument("--logs-dir", default=None, help="Path to _logs/ directory (optional)")
-    parser.add_argument("--output-dir", required=True, help="Path to output data/ directory")
+    parser.add_argument(
+        "--logs-dir", default=None, help="Path to _logs/ directory (optional)"
+    )
+    parser.add_argument(
+        "--output-dir", required=True, help="Path to output data/ directory"
+    )
     args = parser.parse_args()
 
     summary = index_all(args.posts_dir, args.output_dir, args.logs_dir)

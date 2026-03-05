@@ -7,7 +7,12 @@ import pytest
 from src.schema_loader import load_schema
 
 # Real schema path (relative to essay-pipeline root, resolved via test location)
-SCHEMA_PATH = Path(__file__).parent.parent.parent / "editorial-standards" / "schemas" / "frontmatter-schema.yaml"
+SCHEMA_PATH = (
+    Path(__file__).parent.parent.parent
+    / "editorial-standards"
+    / "schemas"
+    / "frontmatter-schema.yaml"
+)
 
 
 class TestLoadSchema:

@@ -242,7 +242,9 @@ class PerplexityClient:
     def from_env(cls) -> "PerplexityClient":
         return cls(
             api_key=os.environ.get("PERPLEXITY_API_KEY", ""),  # allow-secret
-            model=os.environ.get("PERPLEXITY_MODEL", "llama-3.1-sonar-large-128k-online"),
+            model=os.environ.get(
+                "PERPLEXITY_MODEL", "llama-3.1-sonar-large-128k-online"
+            ),
         )
 
     def generate(
@@ -366,8 +368,7 @@ def create_client(provider: str | None = None) -> LLMClient:
         name = name.lower().strip()
         if name not in PROVIDERS:
             raise ValueError(
-                f"Unknown LLM provider: '{name}'. "
-                f"Available: {', '.join(PROVIDERS)}"
+                f"Unknown LLM provider: '{name}'. Available: {', '.join(PROVIDERS)}"
             )
         client = PROVIDERS[name].from_env()
         if not client.configured:

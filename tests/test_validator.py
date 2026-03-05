@@ -2,8 +2,16 @@
 
 from pathlib import Path
 
+from unittest.mock import patch
+
 from src.schema_loader import load_schema
-from src.validator import extract_frontmatter, validate_all, validate_essay, validate_field
+from src.validator import (
+    extract_frontmatter,
+    validate_all,
+    validate_essay,
+    validate_field,
+    main,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SCHEMA_PATH = str(
@@ -12,6 +20,30 @@ SCHEMA_PATH = str(
     / "schemas"
     / "frontmatter-schema.yaml"
 )
+
+
+class TestValidatorMain:
+    @patch("sys.exit")
+    def test_main_success(self, mock_exit, tmp_path):
+        import shutil
+
+        shutil.copy(FIXTURES / "valid-essay.md", tmp_path / "valid.md")
+        with patch(
+            "sys.argv", ["prog", "--posts-dir", str(tmp_path), "--schema", SCHEMA_PATH]
+        ):
+            main()
+        mock_exit.assert_called_with(0)
+
+    @patch("sys.exit")
+    def test_main_failure(self, mock_exit, tmp_path):
+        import shutil
+
+        shutil.copy(FIXTURES / "missing-field.md", tmp_path / "invalid.md")
+        with patch(
+            "sys.argv", ["prog", "--posts-dir", str(tmp_path), "--schema", SCHEMA_PATH]
+        ):
+            main()
+        mock_exit.assert_called_with(1)
 
 
 def get_schema():
@@ -216,7 +248,9 @@ class TestWordCountIntegrity:
             reading_time="5 min",
         )
         errors = validate_essay(p, schema)
-        assert any("does not match expected" in e and "reading_time" in e for e in errors)
+        assert any(
+            "does not match expected" in e and "reading_time" in e for e in errors
+        )
 
     def test_computed_policy_match_passes(self, tmp_path):
         schema = get_schema()
@@ -333,14 +367,14 @@ class TestOptionalFieldValidation:
         bad_value = 99999 if field_type == "string" else "not-a-valid-value"
         p = tmp_path / "bad-optional.md"
         p.write_text(
-            f"---\nlayout: essay\ntitle: \"A Perfectly Valid Test Essay for the Pipeline\"\n"
-            f"author: \"@4444J99\"\ndate: \"2026-02-10\"\n"
+            f'---\nlayout: essay\ntitle: "A Perfectly Valid Test Essay for the Pipeline"\n'
+            f'author: "@4444J99"\ndate: "2026-02-10"\n'
             f"tags:\n  - governance\n  - building-in-public\n"
             f"category: meta-system\n"
-            f"excerpt: \"This essay explores the recursive structure of the essay pipeline itself.\"\n"
+            f'excerpt: "This essay explores the recursive structure of the essay pipeline itself."\n'
             f"portfolio_relevance: HIGH\n"
             f"related_repos:\n  - organvm-v-logos/essay-pipeline\n"
-            f"reading_time: \"8 min\"\nword_count: 1500\n"
+            f'reading_time: "8 min"\nword_count: 1500\n'
             f"{field_name}: {bad_value}\n"
             f"---\n\nBody text.\n"
         )
@@ -368,6 +402,7 @@ class TestValidateAll:
     def test_all_valid(self, tmp_path):
         """Directory with only valid files returns empty error list."""
         import shutil
+
         p = tmp_path / "valid-essay.md"
         shutil.copy(FIXTURES / "valid-essay.md", p)
         errors = validate_all(str(tmp_path), SCHEMA_PATH)

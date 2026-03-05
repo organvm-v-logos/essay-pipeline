@@ -42,9 +42,7 @@ CAT_TAX_PATH = str(
     / "category-taxonomy.yaml"
 )
 TEMPLATE_DIR = str(
-    Path(__file__).parent.parent.parent
-    / "editorial-standards"
-    / "templates"
+    Path(__file__).parent.parent.parent / "editorial-standards" / "templates"
 )
 
 
@@ -135,9 +133,7 @@ class TestBuildSystemPrompt:
         cat_tax = yaml.safe_load(open(CAT_TAX_PATH))
         template = "## Template Section\n\nSome guidance."
 
-        prompt = build_system_prompt(
-            template, schema, rubric, tag_gov, cat_tax, []
-        )
+        prompt = build_system_prompt(template, schema, rubric, tag_gov, cat_tax, [])
         assert "@4444J99" in prompt
         assert "meta-system" in prompt
         assert "case-study" in prompt
@@ -162,9 +158,7 @@ class TestBuildSystemPrompt:
         tag_gov = yaml.safe_load(open(TAG_GOV_PATH))
         cat_tax = yaml.safe_load(open(CAT_TAX_PATH))
 
-        prompt = build_system_prompt(
-            "template", schema, rubric, tag_gov, cat_tax, []
-        )
+        prompt = build_system_prompt("template", schema, rubric, tag_gov, cat_tax, [])
         assert "substance" in prompt
         assert "honesty" in prompt
 
@@ -189,6 +183,7 @@ class TestBuildUserPrompt:
 
     def test_includes_todays_date(self):
         from datetime import date
+
         suggestion = _make_suggestion()
         prompt = build_user_prompt(suggestion)
         assert date.today().isoformat() in prompt
@@ -247,7 +242,8 @@ title: test
 
 class TestRepairFrontmatter:
     def test_fixes_date_format(self):
-        draft = """---
+        draft = (
+            """---
 layout: essay
 title: "Test Essay Title for Repair Testing"
 author: "@4444J99"
@@ -261,7 +257,9 @@ reading_time: "5 min"
 word_count: 100
 ---
 
-""" + "word " * 100
+"""
+            + "word " * 100
+        )
         schema = yaml.safe_load(open(SCHEMA_PATH))
         repaired = repair_frontmatter(draft, ["date"], schema)
         assert "2026-02-27" in repaired
@@ -455,6 +453,7 @@ class TestDraftEssayIntegration:
 
         suggestion = _make_suggestion()
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmpdir:
             posts_dir = Path(tmpdir) / "posts"
             posts_dir.mkdir()
@@ -500,6 +499,7 @@ class TestDraftEssayIntegration:
 
         suggestion = _make_suggestion()
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmpdir:
             result = draft_essay(
                 suggestion=suggestion,
@@ -522,7 +522,8 @@ class TestDraftEssayIntegration:
 class TestRepairFrontmatterExtended:
     def test_fixes_layout_field(self):
         """repair_frontmatter corrects layout to 'essay'."""
-        draft = """---
+        draft = (
+            """---
 layout: post
 title: "Test Essay Title for Layout Fix"
 author: "@4444J99"
@@ -536,7 +537,9 @@ reading_time: "5 min"
 word_count: 500
 ---
 
-""" + "word " * 500
+"""
+            + "word " * 500
+        )
         schema = yaml.safe_load(open(SCHEMA_PATH))
         repaired = repair_frontmatter(draft, ["layout"], schema)
         parts = repaired.split("---", 2)

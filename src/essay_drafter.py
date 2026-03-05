@@ -49,9 +49,7 @@ def build_system_prompt(
     a valid essay that passes schema validation.
     """
     # Extract schema constraints
-    categories = list(
-        category_taxonomy.get("categories", {}).keys()
-    )
+    categories = list(category_taxonomy.get("categories", {}).keys())
     preferred_tags = tag_governance.get("preferred_tags", [])
     tag_rules = tag_governance.get("rules", {})
     rubric_dims = rubric.get("dimensions", {})
@@ -73,7 +71,7 @@ Always use author: "@4444J99"
 - layout: must be "essay"
 - title: 10-200 characters, descriptive not clickbait
 - date: YYYY-MM-DD format, use today's date
-- tags: {tag_rules.get('min_per_essay', 2)}-{tag_rules.get('max_per_essay', 8)} items, lowercase hyphenated, pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+- tags: {tag_rules.get("min_per_essay", 2)}-{tag_rules.get("max_per_essay", 8)} items, lowercase hyphenated, pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
 - category: one of {categories}
 - excerpt: 50-400 characters, one-paragraph summary
 - portfolio_relevance: one of CRITICAL, HIGH, MEDIUM
@@ -82,8 +80,8 @@ Always use author: "@4444J99"
 - word_count: integer >= 500, must match actual body word count
 
 ## Tag Guidance
-Prefer these tags: {', '.join(preferred_tags[:20])}
-Tags must match pattern: {tag_rules.get('pattern', '^[a-z0-9]+(-[a-z0-9]+)*$')}
+Prefer these tags: {", ".join(preferred_tags[:20])}
+Tags must match pattern: {tag_rules.get("pattern", "^[a-z0-9]+(-[a-z0-9]+)*$")}
 
 ## Quality Criteria (aim for {publish_threshold}+ points)
 {chr(10).join(quality_criteria)}
@@ -95,7 +93,7 @@ Follow this template structure for the essay body:
 
 ## Constraints
 - Do NOT fabricate repository names or metrics. Only reference repos that exist in the ORGANVM system.
-- Do NOT repeat titles that already exist. Existing titles: {json.dumps(existing_titles[-10:]) if existing_titles else '[]'}
+- Do NOT repeat titles that already exist. Existing titles: {json.dumps(existing_titles[-10:]) if existing_titles else "[]"}
 - Be honest about limitations and what doesn't work yet.
 - Every paragraph should advance the argument. No filler.
 - The output must be a complete Markdown file with YAML frontmatter delimited by --- on its own line.
@@ -132,29 +130,35 @@ def build_user_prompt(
     if context:
         sprint_narrative = context.get("sprint_narrative", "")
         if sprint_narrative:
-            prompt_parts.extend([
-                "",
-                "## Current Sprint Context",
-                sprint_narrative[:2000],
-            ])
+            prompt_parts.extend(
+                [
+                    "",
+                    "## Current Sprint Context",
+                    sprint_narrative[:2000],
+                ]
+            )
 
         metrics_summary = context.get("metrics_summary", "")
         if metrics_summary:
-            prompt_parts.extend([
-                "",
-                "## Recent Metrics",
-                metrics_summary[:1000],
-            ])
+            prompt_parts.extend(
+                [
+                    "",
+                    "## Recent Metrics",
+                    metrics_summary[:1000],
+                ]
+            )
 
-    prompt_parts.extend([
-        "",
-        "## Instructions",
-        "Write the complete essay as a single Markdown file.",
-        "Start with YAML frontmatter between --- delimiters.",
-        f"Use today's date: {date.today().isoformat()}",
-        "The essay body should be at least 500 words.",
-        "Calculate word_count and reading_time from the actual body length.",
-    ])
+    prompt_parts.extend(
+        [
+            "",
+            "## Instructions",
+            "Write the complete essay as a single Markdown file.",
+            "Start with YAML frontmatter between --- delimiters.",
+            f"Use today's date: {date.today().isoformat()}",
+            "The essay body should be at least 500 words.",
+            "Calculate word_count and reading_time from the actual body length.",
+        ]
+    )
 
     return "\n".join(prompt_parts)
 
@@ -192,9 +196,7 @@ def _count_body_words(text: str) -> int:
     return len(clean.split()) if clean else 0
 
 
-def repair_frontmatter(
-    draft_text: str, errors: list[str], schema: dict
-) -> str:
+def repair_frontmatter(draft_text: str, errors: list[str], schema: dict) -> str:
     """Fix common frontmatter errors without re-calling the LLM.
 
     Handles: date format, tag patterns, word_count accuracy,
@@ -275,7 +277,9 @@ def repair_frontmatter(
         return draft_text
 
     # Reconstruct the document
-    fm_text = yaml.dump(fm, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    fm_text = yaml.dump(
+        fm, default_flow_style=False, allow_unicode=True, sort_keys=False
+    )
     return f"---\n{fm_text}---{parts[2]}"
 
 
@@ -389,13 +393,18 @@ def draft_essay(
         if repaired != draft_text:
             valid, errors = validate_draft(repaired, schema_path)
             if valid:
-                return _write_draft(repaired, output_dir, response, attempt, repaired=True)
+                return _write_draft(
+                    repaired, output_dir, response, attempt, repaired=True
+                )
 
         last_errors = errors
 
     # All retries exhausted — write the best attempt with a warning
     return _write_draft(
-        draft_text, output_dir, last_response, MAX_RETRIES,
+        draft_text,
+        output_dir,
+        last_response,
+        MAX_RETRIES,
         validation_errors=last_errors,
     )
 
@@ -461,51 +470,61 @@ def _derive_slug(text: str) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate an essay draft using LLM"
-    )
+    parser = argparse.ArgumentParser(description="Generate an essay draft using LLM")
     parser.add_argument(
-        "--suggestions", required=True,
+        "--suggestions",
+        required=True,
         help="Path to topic-suggestions.json",
     )
     parser.add_argument(
-        "--suggestion-index", type=int, default=0,
+        "--suggestion-index",
+        type=int,
+        default=0,
         help="Index into the suggestions list (default: 0)",
     )
     parser.add_argument(
-        "--template-dir", required=True,
+        "--template-dir",
+        required=True,
         help="Path to editorial-standards/templates/",
     )
     parser.add_argument(
-        "--schema", required=True,
+        "--schema",
+        required=True,
         help="Path to frontmatter-schema.yaml",
     )
     parser.add_argument(
-        "--rubric", required=True,
+        "--rubric",
+        required=True,
         help="Path to quality-rubric.yaml",
     )
     parser.add_argument(
-        "--tag-governance", required=True,
+        "--tag-governance",
+        required=True,
         help="Path to tag-governance.yaml",
     )
     parser.add_argument(
-        "--category-taxonomy", required=True,
+        "--category-taxonomy",
+        required=True,
         help="Path to category-taxonomy.yaml",
     )
     parser.add_argument(
-        "--posts-dir", required=True,
+        "--posts-dir",
+        required=True,
         help="Path to existing _posts/ directory",
     )
     parser.add_argument(
-        "--output-dir", required=True,
+        "--output-dir",
+        required=True,
         help="Output directory for draft essay",
     )
     parser.add_argument(
-        "--sprint-narrative", default=None,
+        "--sprint-narrative",
+        default=None,
         help="Path to sprint-narrative-draft.md (optional context)",
     )
     parser.add_argument(
-        "--provider", default=None,
+        "--provider",
+        default=None,
         help="LLM provider override (default: auto-detect from env)",
     )
     args = parser.parse_args()
@@ -567,8 +586,10 @@ def main():
         print("Frontmatter was auto-repaired")
     if result.get("llm"):
         llm = result["llm"]
-        print(f"LLM: {llm['provider']}/{llm['model']} "
-              f"({llm['input_tokens']}+{llm['output_tokens']} tokens)")
+        print(
+            f"LLM: {llm['provider']}/{llm['model']} "
+            f"({llm['input_tokens']}+{llm['output_tokens']} tokens)"
+        )
 
     sys.exit(0 if result.get("valid") else 1)
 

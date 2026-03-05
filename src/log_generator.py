@@ -90,7 +90,8 @@ def git_log(repo: Path, since: str, until: str) -> list[dict]:
     try:
         result = subprocess.run(
             [
-                "git", "log",
+                "git",
+                "log",
                 f"--since={_anchor_date(since)}",
                 f"--until={_anchor_date(until)}",
                 "--format=%H|%ai|%s",
@@ -114,11 +115,13 @@ def git_log(repo: Path, since: str, until: str) -> list[dict]:
         parts = line.split("|", 2)
         if len(parts) != 3:
             continue
-        commits.append({
-            "hash": parts[0][:7],
-            "date": parts[1].split(" ")[0],
-            "message": parts[2],
-        })
+        commits.append(
+            {
+                "hash": parts[0][:7],
+                "date": parts[1].split(" ")[0],
+                "message": parts[2],
+            }
+        )
     return commits
 
 
@@ -127,7 +130,8 @@ def git_files_changed(repo: Path, since: str, until: str) -> int:
     try:
         result = subprocess.run(
             [
-                "git", "log",
+                "git",
+                "log",
                 f"--since={_anchor_date(since)}",
                 f"--until={_anchor_date(until)}",
                 "--no-merges",
@@ -219,9 +223,7 @@ def infer_tags(commits: list[dict]) -> list[str]:
     return sorted(tags)
 
 
-def scan_workspace(
-    workspace: Path, since: str, until: str
-) -> dict:
+def scan_workspace(workspace: Path, since: str, until: str) -> dict:
     """Scan all git repos and build the activity data structure."""
     repos = find_git_repos(workspace)
 
@@ -452,10 +454,10 @@ tags: []{tag_comment}
 mood:     # choose: breakthrough, focused, grinding, frustrated, reflective
 organs_touched:{organs_yaml}
 activity:
-  since: "{activity['since']}"
-  commits: {summary['total_commits']}
-  repos_active: {summary['repos_active']}
-  files_changed: {summary['files_changed']}
+  since: "{activity["since"]}"
+  commits: {summary["total_commits"]}
+  repos_active: {summary["repos_active"]}
+  files_changed: {summary["files_changed"]}
 links:{links_yaml}
 ---"""
 
@@ -505,7 +507,7 @@ links:{links_yaml}
 
 ## Workspace Activity
 
-**{summary['total_commits']} commits** across **{summary['repos_active']} repos** in **{organ_count} organs** since {since_display}.
+**{summary["total_commits"]} commits** across **{summary["repos_active"]} repos** in **{organ_count} organs** since {since_display}.
 """
 
     # Per-organ breakdown
@@ -549,9 +551,7 @@ def write_outputs(
     activity_dir.mkdir(parents=True, exist_ok=True)
     json_path = activity_dir / f"{until_date}.json"
     json_output = build_json_output(activity)
-    json_path.write_text(
-        json.dumps(json_output, indent=2, ensure_ascii=False) + "\n"
-    )
+    json_path.write_text(json.dumps(json_output, indent=2, ensure_ascii=False) + "\n")
 
     # Scaffold output — never overwrite an existing log entry
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -574,7 +574,9 @@ def main():
         description="Scan workspace git activity and scaffold a captain's log entry"
     )
     parser.add_argument(
-        "--mode", choices=["local", "github-api"], default="local",
+        "--mode",
+        choices=["local", "github-api"],
+        default="local",
         help="Data source: local git repos or GitHub Events API (default: local)",
     )
     parser.add_argument(
@@ -583,23 +585,28 @@ def main():
         help="Path to workspace root — used in local mode (default: ~/Workspace)",
     )
     parser.add_argument(
-        "--logs-dir", required=True,
+        "--logs-dir",
+        required=True,
         help="Path to _logs/ directory",
     )
     parser.add_argument(
-        "--data-dir", required=True,
+        "--data-dir",
+        required=True,
         help="Path to data/ directory",
     )
     parser.add_argument(
-        "--since", default="auto",
+        "--since",
+        default="auto",
         help="ISO date or 'auto' (default: auto = most recent log date)",
     )
     parser.add_argument(
-        "--until", default=(date.today() + timedelta(days=1)).isoformat(),
+        "--until",
+        default=(date.today() + timedelta(days=1)).isoformat(),
         help="ISO date, exclusive upper bound (default: tomorrow, i.e. includes today)",
     )
     parser.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Print scaffold to stdout instead of writing files",
     )
     args = parser.parse_args()
@@ -620,7 +627,10 @@ def main():
     if args.mode == "github-api":
         token = os.environ.get("GITHUB_TOKEN", "")  # allow-secret
         if not token:
-            print("Error: GITHUB_TOKEN not set (required for github-api mode)", file=sys.stderr)
+            print(
+                "Error: GITHUB_TOKEN not set (required for github-api mode)",
+                file=sys.stderr,
+            )
             sys.exit(1)
         activity = scan_github_orgs(token, DEFAULT_GITHUB_ORGS, since, until)
     else:
@@ -645,9 +655,7 @@ def main():
             f"{len(summary['organs_touched'])} organs"
         )
     else:
-        json_path, scaffold_path = write_outputs(
-            activity, logs_dir, data_dir, log_date
-        )
+        json_path, scaffold_path = write_outputs(activity, logs_dir, data_dir, log_date)
         print(f"Activity JSON: {json_path}")
         print(f"Log scaffold:  {scaffold_path}")
         print(

@@ -37,17 +37,23 @@ def summarize_web_engagement(metrics: dict) -> str:
     pages = metrics.get("pages", [])
     trends = metrics.get("trends", {})
 
-    parts = [f"The public-process site received **{views:,} page views** from **{visitors:,} unique visitors**."]
+    parts = [
+        f"The public-process site received **{views:,} page views** from **{visitors:,} unique visitors**."
+    ]
 
     if pages:
         top = pages[0]
-        parts.append(f"The most-visited page was `{top.get('path', '?')}` with {top.get('views', 0):,} views.")
+        parts.append(
+            f"The most-visited page was `{top.get('path', '?')}` with {top.get('views', 0):,} views."
+        )
 
     views_delta = trends.get("views_delta_pct")
     visitors_delta = trends.get("visitors_delta_pct")
     if views_delta is not None:
         direction = "up" if views_delta >= 0 else "down"
-        parts.append(f"Page views are {direction} {abs(views_delta):.1f}% from the previous period.")
+        parts.append(
+            f"Page views are {direction} {abs(views_delta):.1f}% from the previous period."
+        )
     if visitors_delta is not None:
         direction = "up" if visitors_delta >= 0 else "down"
         parts.append(f"Unique visitors are {direction} {abs(visitors_delta):.1f}%.")
@@ -94,7 +100,9 @@ def summarize_essay_corpus(index: dict) -> str:
     categories = index.get("categories", {})
     tag_freq = index.get("tag_frequency", {})
 
-    parts = [f"The corpus now contains **{total} essays** totaling **{words:,} words**."]
+    parts = [
+        f"The corpus now contains **{total} essays** totaling **{words:,} words**."
+    ]
 
     if categories:
         cat_parts = [f"{cat} ({count})" for cat, count in categories.items()]
@@ -123,7 +131,9 @@ def summarize_publication_cadence(calendar: dict) -> str:
     first = sorted_dates[0]
     last = sorted_dates[-1]
 
-    parts = [f"Essays were published across **{num_days} distinct days**, from {first} to {last}."]
+    parts = [
+        f"Essays were published across **{num_days} distinct days**, from {first} to {last}."
+    ]
 
     max_day = max(dates.items(), key=lambda x: x[1])
     parts.append(f"The busiest day was {max_day[0]} with {max_day[1]} essay(s).")
@@ -143,7 +153,11 @@ def format_alerts(report: dict) -> str:
     lines = []
     for alert in alerts:
         severity = alert.get("severity", "info")
-        icon = {"warning": "\u26a0\ufe0f", "critical": "\u274c", "info": "\u2139\ufe0f"}.get(severity, "\u2139\ufe0f")
+        icon = {
+            "warning": "\u26a0\ufe0f",
+            "critical": "\u274c",
+            "info": "\u2139\ufe0f",
+        }.get(severity, "\u2139\ufe0f")
         rule = alert.get("rule", "unknown")
         desc = alert.get("description", "")
         current = alert.get("current_value", "?")
@@ -207,20 +221,28 @@ def generate_narrative(
     for alert in alerts:
         rule = alert.get("rule", "")
         if "stall" in rule:
-            focus_items.append("- Address development stall: increase commit cadence across organs.")
+            focus_items.append(
+                "- Address development stall: increase commit cadence across organs."
+            )
 
     # Suggest based on engagement
     totals = (metrics or {}).get("site_totals", {})
     if totals.get("page_views", 0) == 0:
-        focus_items.append("- No web traffic recorded — verify GoatCounter integration or site deployment.")
+        focus_items.append(
+            "- No web traffic recorded — verify GoatCounter integration or site deployment."
+        )
 
     # Suggest based on corpus
     total_essays = (index or {}).get("total_essays", 0)
     if total_essays > 0:
-        focus_items.append(f"- Continue expanding the essay corpus (currently {total_essays} essays).")
+        focus_items.append(
+            f"- Continue expanding the essay corpus (currently {total_essays} essays)."
+        )
 
     if not focus_items:
-        focus_items.append("- No specific focus areas identified from the current data.")
+        focus_items.append(
+            "- No specific focus areas identified from the current data."
+        )
 
     sections.extend(focus_items)
     sections.append("")
@@ -267,14 +289,24 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate sprint narrative from analytics and essay data"
     )
-    parser.add_argument("--metrics", required=True, help="Path to engagement-metrics.json")
-    parser.add_argument("--report", required=True, help="Path to system-engagement-report.json")
+    parser.add_argument(
+        "--metrics", required=True, help="Path to engagement-metrics.json"
+    )
+    parser.add_argument(
+        "--report", required=True, help="Path to system-engagement-report.json"
+    )
     parser.add_argument("--index", required=True, help="Path to essays-index.json")
-    parser.add_argument("--calendar", required=True, help="Path to publication-calendar.json")
-    parser.add_argument("--output", required=True, help="Output path for sprint-narrative-draft.md")
+    parser.add_argument(
+        "--calendar", required=True, help="Path to publication-calendar.json"
+    )
+    parser.add_argument(
+        "--output", required=True, help="Output path for sprint-narrative-draft.md"
+    )
     args = parser.parse_args()
 
-    summary = narrate_all(args.metrics, args.report, args.index, args.calendar, args.output)
+    summary = narrate_all(
+        args.metrics, args.report, args.index, args.calendar, args.output
+    )
 
     print(
         f"Generated sprint narrative with {len(summary['sections'])} sections "
