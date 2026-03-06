@@ -26,7 +26,8 @@ from src.log_generator import (
 
 
 class TestOrganDetection:
-    def test_all_organs(self):
+    def test_all_organs(self, tmp_path):
+        workspace = tmp_path
         cases = {
             "organvm-i-theoria": ("I", "Theoria"),
             "organvm-ii-poiesis": ("II", "Poiesis"),
@@ -39,17 +40,30 @@ class TestOrganDetection:
             "4444J99": ("Personal", "Personal"),
         }
         for dir_name, expected in cases.items():
-            assert detect_organ(dir_name) == expected, f"Failed for {dir_name}"
+            organ_dir = workspace / dir_name
+            organ_dir.mkdir(exist_ok=True)
+            repo_dir = organ_dir / "some-repo"
+            repo_dir.mkdir(exist_ok=True)
+            assert detect_organ(repo_dir, workspace) == expected, f"Failed for {dir_name}"
 
-    def test_unknown_directory(self):
-        assert detect_organ("random-dir") is None
-        assert detect_organ("") is None
+    def test_unknown_directory(self, tmp_path):
+        workspace = tmp_path
+        random_dir = workspace / "random-dir"
+        random_dir.mkdir()
+        assert detect_organ(random_dir, workspace) is None
 
-    def test_case_sensitive(self):
+    def test_case_sensitive(self, tmp_path):
+        workspace = tmp_path
         # Only exact matches
-        assert detect_organ("ORGANVM-I-THEORIA") is None
+        upper = workspace / "ORGANVM-I-THEORIA"
+        upper.mkdir()
+        assert detect_organ(upper, workspace) is None
         # But 4444j99 lowercase works
-        assert detect_organ("4444j99") == ("Personal", "Personal")
+        lower_personal = workspace / "4444j99"
+        lower_personal.mkdir()
+        repo = lower_personal / "repo"
+        repo.mkdir()
+        assert detect_organ(repo, workspace) == ("Personal", "Personal")
 
 
 class TestAutoSinceDetection:

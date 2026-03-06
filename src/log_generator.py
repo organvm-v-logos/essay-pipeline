@@ -52,26 +52,43 @@ PREFIX_TAG_MAP: dict[str, str] = {
 }
 
 
-def detect_organ(dir_name: str) -> tuple[str, str] | None:
-    """Map a workspace directory name to its organ numeral and name."""
-    return ORGAN_MAP.get(dir_name)
+def detect_organ(path: Path, workspace: Path) -> tuple[str, str] | None:
+    """Walk up the tree from path to workspace to find an organ directory."""
+    current = path
+    # If the path itself is a git repo, start checking from its parent or itself
+    # but we want to find the 'organvm-*' or 'meta-organvm' or '4444J99' folder.
+    while current != workspace and current != current.parent:
+        if current.name in ORGAN_MAP:
+            return ORGAN_MAP[current.name]
+        current = current.parent
+    return None
 
 
-def find_git_repos(workspace: Path, max_depth: int = 2) -> list[Path]:
-    """Walk workspace up to max_depth for directories containing .git."""
-    repos = []
-    for depth1 in sorted(workspace.iterdir()):
-        if not depth1.is_dir() or depth1.name.startswith("."):
-            continue
-        if (depth1 / ".git").is_dir():
-            repos.append(depth1)
-        if max_depth >= 2:
-            for depth2 in sorted(depth1.iterdir()):
-                if not depth2.is_dir() or depth2.name.startswith("."):
-                    continue
-                if (depth2 / ".git").is_dir():
-                    repos.append(depth2)
-    return repos
+def find_git_repos(workspace: Path) -> list[Path]:
+    """Recursively find all directories containing .git, excluding hidden and noise dirs."""
+    try:
+        # Use 'find' command for performance.
+        # Prune hidden directories (starting with .) except we need to find .git itself.
+        # We also prune common noise directories.
+        cmd = [
+            "find", str(workspace),
+            "(", "-name", "node_modules", "-o",
+            "-name", ".venv", "-o",
+            "-name", ".next", "-o",
+            "-name", "dist", "-o",
+            "-name", "build", "-o",
+            "(", "-name", ".*", "-a", "!", "-name", ".git", ")",
+            ")", "-prune", "-o",
+            "-name", ".git", "-type", "d", "-print"
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        if result.returncode != 0:
+            return []
+        
+        repo_paths = [Path(line).parent for line in result.stdout.strip().splitlines() if line]
+        return sorted(list(set(repo_paths)))
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
 
 
 def _anchor_date(d: str) -> str:
@@ -246,11 +263,7 @@ def scan_workspace(workspace: Path, since: str, until: str) -> dict:
         all_commits_flat.extend(commits)
 
         # Determine organ
-        parent_name = repo.parent.name
-        organ_info = detect_organ(parent_name)
-        if organ_info is None:
-            # Top-level repo or unknown organ
-            organ_info = detect_organ(repo.name)
+        organ_info = detect_organ(repo, workspace)
         if organ_info is None:
             organ_key = "other"
             organ_name = "Other"
@@ -621,7 +634,7 @@ def main():
         since = args.since
 
     until = args.until
-    log_date = date.today().isoformat()
+    log_date = since[:10] if since != "auto" else date.today().isoformat()
 
     # Scan via selected mode
     if args.mode == "github-api":
