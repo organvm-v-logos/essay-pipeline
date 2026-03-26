@@ -14,11 +14,14 @@ jobs:
       - name: Checkout essay-pipeline
         uses: actions/checkout@v6
 
-      - name: Checkout editorial-standards (sibling for schema resolution)
+      - name: Checkout editorial-standards
         uses: actions/checkout@v6
         with:
           repository: organvm-v-logos/editorial-standards
-          path: ../editorial-standards
+          path: editorial-standards-checkout
+
+      - name: Symlink editorial-standards as sibling for schema path resolution
+        run: ln -s "$GITHUB_WORKSPACE/editorial-standards-checkout" "$GITHUB_WORKSPACE/../editorial-standards"
 
       - name: Set up Python
         uses: actions/setup-python@v5
