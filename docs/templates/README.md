@@ -6,8 +6,9 @@ fill scaffolds. Copy a template, replace the `{{TOKENS}}`, and it passes
 `essay-validate` against the editorial-standards frontmatter schema on the first
 try.
 
-One **free sample** is included. The rest are **premium**, unlocked once with a
-one-time-purchase license key — no subscription, no activation server.
+One **free sample** is included. The rest are **premium**, unlocked with a
+signed license key. One-time purchase keys are perpetual; subscription keys can
+carry an expiration date. No activation server is required for reads.
 
 ## Catalog
 
@@ -28,16 +29,20 @@ The canonical machine-readable catalog is [`templates/manifest.yaml`](../../temp
 | --- | ------------ | ----- |
 | `premium-single` | One named premium template | **$49** |
 | `premium-bundle` | All premium templates + every future addition | **$99** |
+| `premium-subscription` | Premium access through the active billing period | configured in Stripe |
 
-One-time purchase. Each sale issues a license key tied to the buyer's email. A
-`premium-single` key is also tied to the purchased template id.
+One-time purchase. Each sale issues a license key tied to the buyer's email.
+Subscription checkout is also supported with the `premium-subscription` SKU when
+you configure a recurring Stripe Price.
 
 ## How it works
 
 ```
-buy ──▶ seller runs `essay-license issue` ──▶ you receive a key
-                                                     │
-                          `essay-template list --license KEY`  (purchased templates show "unlocked")
+buy ──▶ Stripe Checkout ──▶ signed webhook ──▶ `essay-billing stripe-webhook`
+                                                            │
+                                      license key tied to buyer email
+                                                            │
+                          `essay-template list --license KEY`  (premium shows "unlocked")
                           `essay-template eject case-study --output my-essay.md --license KEY`
 ```
 
@@ -75,23 +80,54 @@ essay-validate --posts-dir drafts/ \
 
 ## Licensing model (HMAC key check)
 
-License keys are signed with **HMAC-SHA256** over a readable payload:
-`sku | email | issued` for bundle purchases, and
-`sku | email | issued | template_id` for single-template purchases.
-Verification is fully offline — the same shared secret signs and verifies. See
-[`src/license.py`](../../src/license.py) and the architecture note in
+License keys are signed with **HMAC-SHA256** over a readable payload
+(`sku | email | issued | optional expires`). Verification is fully offline —
+the same shared secret signs and verifies. See [`src/license.py`](../../src/license.py) and the architecture note in
 [`docs/adr/003-template-library-licensing.md`](../adr/003-template-library-licensing.md).
 
-**For sellers.** Set a private signing secret and issue keys with it:
+**For sellers.** Set a private signing secret. Stripe Checkout is the normal
+sale path:
 
 ```bash
 export ESSAY_PIPELINE_LICENSE_SECRET="your-long-random-private-secret"
+export STRIPE_SECRET_KEY="sk_live_..."
+export STRIPE_WEBHOOK_SECRET="whsec_..."
+export STRIPE_PRICE_PREMIUM_BUNDLE="price_..."
+
+essay-billing checkout \
+  --sku premium-bundle \
+  --success-url https://example.com/thanks \
+  --cancel-url https://example.com/templates
+
+# In your webhook handler/job, pass the raw JSON body plus Stripe-Signature:
+essay-billing stripe-webhook --signature "$STRIPE_SIGNATURE" < stripe-event.json
+# → LICENSE_ISSUED ... key: EPK1....
+```
+
+Manual issuance remains available for back-office or migration cases:
+
+```bash
 essay-license issue --email buyer@example.com --sku premium-bundle
 # → EPK1.GEZDGNBV.MFRGGZDF...   (give this to the buyer)
 
 essay-license issue --email buyer@example.com --sku premium-single --template case-study
 # → EPK1.GEZDGNBV.MFRGGZDF...   (unlocks only case-study)
 ```
+
+For subscriptions, configure a recurring Stripe Price and use:
+
+```bash
+export STRIPE_PRICE_PREMIUM_SUBSCRIPTION="price_..."
+essay-billing checkout \
+  --sku premium-subscription \
+  --mode subscription \
+  --email buyer@example.com \
+  --success-url https://example.com/thanks \
+  --cancel-url https://example.com/templates
+```
+
+Active `customer.subscription.created` / `updated` / `resumed` webhooks issue
+an expiring license key through the current Stripe billing period.
 
 **For buyers.** Verify a key you received:
 

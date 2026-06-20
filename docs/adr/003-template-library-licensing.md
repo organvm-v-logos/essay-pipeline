@@ -8,6 +8,10 @@ Accepted
 
 2026-06-19
 
+> Update, 2026-06-20: ADR 004 adds Stripe Checkout and optional subscription
+> issuance. This ADR remains the decision record for the offline license gate
+> that premium features consume.
+
 ## Context
 
 The essay-pipeline already enforces a strict frontmatter schema on every essay
@@ -16,11 +20,14 @@ a known-good shape that a draft must satisfy. We can package that contract as a
 product — a catalog of ready-to-fill **schema-enforced templates** that drop an
 author straight into a valid scaffold.
 
-The product is a **one-time-purchase template library** ($49 single template,
-$99 full bundle): a free sample template plus a set of premium templates behind
-a license gate. We need to decide how that gate works, given hard constraints:
+The product started as a **one-time-purchase template library** ($49 single
+template, $99 full bundle): a free sample template plus a set of premium
+templates behind a license gate. We need to decide how that gate works, given
+hard constraints:
 
-1. No subscription, no recurring billing, no user accounts.
+1. No user accounts, and no requirement that reads call back to a hosted
+   activation service. Optional subscription billing can still issue expiring
+   offline keys.
 2. No activation/license server to run and keep available — the pipeline is a
    set of CLI tools and GitHub Actions, not a hosted service.
 3. The whole repo is open source, so the gate must be honest about what it can
@@ -30,10 +37,10 @@ a license gate. We need to decide how that gate works, given hard constraints:
 ### Options
 
 **Option A: HMAC-signed offline keys (chosen)**
-A license key is a readable payload (`sku | email | issued`, plus
-`template_id` for single-template purchases) and a truncated HMAC-SHA256 tag,
-base32-encoded. The same shared secret signs and verifies, so verification is
-fully offline. Issuing is one command; checking is one function.
+A license key is a readable payload (`sku | email | issued | optional expires`)
+plus a truncated HMAC-SHA256 tag, base32-encoded. The same shared secret signs
+and verifies, so verification is fully offline. Issuing is one command;
+checking is one function.
 
 **Option B: Asymmetric signatures (Ed25519)**
 The seller holds a private key; the client ships only the public key. A leaked
@@ -62,12 +69,10 @@ served unconditionally, premium templates require a license whose `sku` covers
 premium access.
 
 Key format: `EPK1.<base32 payload>.<base32 tag>`. The payload is intentionally
-*readable* (a license should disclose who/what/when), only signed — not
-encrypted. Bundle keys use the three-field payload. Single-template keys use a
-fourth `template_id` field so the $49 SKU unlocks exactly the purchased
-template while the $99 bundle unlocks all premium templates. The signing secret
-resolves from `ESSAY_PIPELINE_LICENSE_SECRET`, falling back to a bundled demo
-secret so the gate is exercisable in tests and CI without configuration.
+*readable* (a license should disclose who/what/when, and possibly until when),
+only signed — not encrypted. The signing secret resolves from
+`ESSAY_PIPELINE_LICENSE_SECRET`, falling back to a bundled demo secret so the
+gate is exercisable in tests and CI without configuration.
 
 ## Consequences
 
