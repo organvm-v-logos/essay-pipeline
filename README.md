@@ -68,6 +68,12 @@ Scans workspace or GitHub activity and scaffolds daily captain's logs plus activ
 
 Extracts and validates markdown links (internal + external) and emits structured reports for CI/QA use.
 
+### `src/dashboard.py`
+
+Shows a compact status/usage dashboard from generated pipeline artifacts: corpus
+size, publication cadence, topic-suggestion mix, public-process usage, system
+activity, and alerts.
+
 ### `src/llm_client.py`
 
 Provider-agnostic client layer for Anthropic, OpenAI, Gemini, Perplexity, and Ollama.
@@ -196,6 +202,17 @@ python -m src.sprint_narrator \
   --index ../public-process/data/essays-index.json \
   --calendar ../public-process/data/publication-calendar.json \
   --output data/sprint-narrative-draft.md
+
+# Show status and usage dashboard
+python -m src.dashboard \
+  --index ../public-process/data/essays-index.json \
+  --calendar ../public-process/data/publication-calendar.json \
+  --suggestions data/topic-suggestions.json \
+  --metrics ../analytics-engine/data/engagement-metrics.json \
+  --report ../analytics-engine/data/system-engagement-report.json
+
+# Emit machine-readable dashboard JSON for CI artifacts
+essay-dashboard --format json --output /tmp/essay-dashboard.json
 ```
 
 ### Testing

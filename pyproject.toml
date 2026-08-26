@@ -22,6 +22,7 @@ essay-draft = "src.essay_drafter:main"
 link-check = "src.link_checker:main"
 essay-template = "src.template_store:main"
 essay-license = "src.license:main"
+essay-dashboard = "src.dashboard:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
