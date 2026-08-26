@@ -20,6 +20,26 @@ class TestRoundTrip:
         lic = verify_license(key, secret=SECRET)
         assert lic == License(sku="premium-bundle", email="buyer@example.com", issued="2026-06-19")
         assert lic.covers_premium() is True
+        assert lic.covers_template("case-study") is True
+
+    def test_single_template_license_covers_only_that_template(self):
+        key = issue_license(
+            "buyer@example.com",
+            sku="premium-single",
+            issued="2026-06-19",
+            template_id="case-study",
+            secret=SECRET,
+        )
+        lic = verify_license(key, secret=SECRET)
+        assert lic == License(
+            sku="premium-single",
+            email="buyer@example.com",
+            issued="2026-06-19",
+            template_id="case-study",
+        )
+        assert lic.covers_premium() is True
+        assert lic.covers_template("case-study") is True
+        assert lic.covers_template("technical-deep-dive") is False
 
     def test_default_secret_roundtrips_without_config(self):
         key = issue_license("buyer@example.com")
@@ -72,6 +92,28 @@ class TestRejection:
     def test_field_separator_in_email_rejected(self):
         with pytest.raises(LicenseError):
             issue_license("a|b@example.com", secret=SECRET)
+
+    def test_field_separator_in_template_id_rejected(self):
+        with pytest.raises(LicenseError):
+            issue_license(
+                "buyer@example.com",
+                sku="premium-single",
+                template_id="case|study",
+                secret=SECRET,
+            )
+
+    def test_single_template_license_requires_template_id(self):
+        with pytest.raises(LicenseError, match="template id"):
+            issue_license("buyer@example.com", sku="premium-single", secret=SECRET)
+
+    def test_template_id_is_only_for_single_template_licenses(self):
+        with pytest.raises(LicenseError, match="premium-single"):
+            issue_license(
+                "buyer@example.com",
+                sku="premium-bundle",
+                template_id="case-study",
+                secret=SECRET,
+            )
 
 
 class TestIsValid:

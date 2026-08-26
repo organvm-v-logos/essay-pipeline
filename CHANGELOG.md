@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `essay-template` and `essay-license` console scripts to `pyproject.toml`
 - Added ADR 003 documenting the HMAC licensing decision (`docs/adr/003-template-library-licensing.md`)
 - Added `tests/test_license.py` and `tests/test_template_store.py`
+- Added template-specific entitlements for `premium-single` license keys so $49
+  purchases unlock only the purchased template while `premium-bundle` keys
+  unlock the full premium catalog
 - Extended `src/topic_suggester.py` with configurable thresholds/limits (`tag-threshold`, `surfaced-threshold`, `max-suggestions`, `per-type-limit`)
 - Added suggestion ranking pipeline: score normalization, priority buckets, effort estimates, deduplication, per-type balancing, and stable rank assignment
 - Added corpus-aware helpers for tag co-occurrence and companion-tag inference to enrich suggestion payloads

@@ -30,9 +30,10 @@ a license gate. We need to decide how that gate works, given hard constraints:
 ### Options
 
 **Option A: HMAC-signed offline keys (chosen)**
-A license key is a readable payload (`sku | email | issued`) plus a truncated
-HMAC-SHA256 tag, base32-encoded. The same shared secret signs and verifies, so
-verification is fully offline. Issuing is one command; checking is one function.
+A license key is a readable payload (`sku | email | issued`, plus
+`template_id` for single-template purchases) and a truncated HMAC-SHA256 tag,
+base32-encoded. The same shared secret signs and verifies, so verification is
+fully offline. Issuing is one command; checking is one function.
 
 **Option B: Asymmetric signatures (Ed25519)**
 The seller holds a private key; the client ships only the public key. A leaked
@@ -62,9 +63,11 @@ premium access.
 
 Key format: `EPK1.<base32 payload>.<base32 tag>`. The payload is intentionally
 *readable* (a license should disclose who/what/when), only signed — not
-encrypted. The signing secret resolves from `ESSAY_PIPELINE_LICENSE_SECRET`,
-falling back to a bundled demo secret so the gate is exercisable in tests and CI
-without configuration.
+encrypted. Bundle keys use the three-field payload. Single-template keys use a
+fourth `template_id` field so the $49 SKU unlocks exactly the purchased
+template while the $99 bundle unlocks all premium templates. The signing secret
+resolves from `ESSAY_PIPELINE_LICENSE_SECRET`, falling back to a bundled demo
+secret so the gate is exercisable in tests and CI without configuration.
 
 ## Consequences
 

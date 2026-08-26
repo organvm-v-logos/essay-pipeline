@@ -109,12 +109,13 @@ one-time-purchase license key (HMAC key check, no server, no subscription).
 ```bash
 essay-template list                         # free shows "open", premium "locked"
 essay-template show field-note              # free — no key needed
-essay-license issue --email buyer@x.com     # seller mints a key after a sale
+essay-license issue --email buyer@x.com --sku premium-single --template case-study
 essay-template eject case-study --output drafts/my-essay.md --license EPK1.…
 ```
 
-Pricing: **$49** for any single premium template (`premium-single`), **$99** for
-the full bundle (`premium-bundle`).
+Pricing: **$49** for one named premium template (`premium-single`), **$99** for
+the full bundle (`premium-bundle`). Single-template keys unlock only the
+purchased template; bundle keys unlock every premium template.
 
 ## Workflow Integration
 

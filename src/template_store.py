@@ -20,7 +20,7 @@ from pathlib import Path
 
 import yaml
 
-from .license import LicenseError, is_valid, verify_license
+from .license import LicenseError, verify_license
 
 # templates/ lives at the repo root, one level up from src/.
 TEMPLATES_DIR = Path(__file__).resolve().parents[1] / "templates"
@@ -104,16 +104,16 @@ def is_unlocked(
     """Whether `entry` is accessible given (or lacking) a license key."""
     if not entry.is_premium:
         return True
-    return _license_grants_premium(license_key, secret)
+    return _license_grants_template(license_key, entry.id, secret)
 
 
-def _license_grants_premium(
-    license_key: str | None, secret: bytes | str | None
+def _license_grants_template(
+    license_key: str | None, template_id: str, secret: bytes | str | None
 ) -> bool:
     if not license_key:
         return False
     try:
-        return verify_license(license_key, secret).covers_premium()
+        return verify_license(license_key, secret).covers_template(template_id)
     except LicenseError:
         return False
 
@@ -134,9 +134,10 @@ def read_template(
     base = Path(templates_dir) if templates_dir else TEMPLATES_DIR
     entry = get_entry(template_id, base)
 
-    if entry.is_premium and not _license_grants_premium(license_key, secret):
+    if entry.is_premium and not _license_grants_template(license_key, entry.id, secret):
         raise LicenseRequired(
-            f"'{template_id}' is a premium template. Provide a valid license key "
+            f"'{template_id}' is a premium template. Provide a valid premium-bundle "
+            f"key or a premium-single key for this template "
             f"(buy at the catalog in docs/templates/README.md, then pass --license)."
         )
 
@@ -148,17 +149,26 @@ def read_template(
 
 def _cmd_list(args: argparse.Namespace) -> int:
     entries = list_templates()
-    unlocked_premium = is_valid(args.license)
+    locked_premium = []
     print(f"{'ID':<22} {'TIER':<8} {'ACCESS':<10} TITLE")
     print("-" * 72)
     for entry in entries:
-        access = "open" if is_unlocked(entry, args.license) else "locked"
-        if entry.is_premium and unlocked_premium:
+        unlocked = is_unlocked(entry, args.license)
+        access = "open" if unlocked else "locked"
+        if entry.is_premium and unlocked:
             access = "unlocked"
+        if entry.is_premium and not unlocked:
+            locked_premium.append(entry.id)
         print(f"{entry.id:<22} {entry.tier:<8} {access:<10} {entry.title}")
         if entry.summary:
             print(f"{'':<22} {'':<8} {'':<10} {entry.summary}")
-    if not unlocked_premium:
+
+    if locked_premium and args.license:
+        print(
+            "\nSome premium templates are locked. Use a premium-bundle key "
+            "or a matching premium-single key."
+        )
+    elif locked_premium:
         print("\nPremium templates are locked. See docs/templates/README.md to purchase.")
     return 0
 

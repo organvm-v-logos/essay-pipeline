@@ -19,6 +19,15 @@ def _bundle_key():
     return issue_license("buyer@example.com", sku="premium-bundle", secret=SECRET)
 
 
+def _single_key(template_id: str):
+    return issue_license(
+        "buyer@example.com",
+        sku="premium-single",
+        template_id=template_id,
+        secret=SECRET,
+    )
+
+
 class TestCatalog:
     def test_manifest_lists_templates(self):
         entries = list_templates()
@@ -68,10 +77,15 @@ class TestGate:
         body = read_template("case-study", license_key=_bundle_key(), secret=SECRET)
         assert "layout: essay" in body
 
-    def test_single_sku_also_grants_access(self):
-        key = issue_license("a@b.co", sku="premium-single", secret=SECRET)
+    def test_single_sku_grants_matching_template_access(self):
+        key = _single_key("technical-deep-dive")
         body = read_template("technical-deep-dive", license_key=key, secret=SECRET)
         assert "layout: essay" in body
+
+    def test_single_sku_denies_unmatched_template_access(self):
+        key = _single_key("technical-deep-dive")
+        with pytest.raises(LicenseRequired):
+            read_template("case-study", license_key=key, secret=SECRET)
 
     def test_unknown_sku_does_not_unlock(self):
         key = issue_license("a@b.co", sku="freebie", secret=SECRET)
@@ -88,3 +102,8 @@ class TestIsUnlocked:
 
     def test_premium_unlocked_with_key(self):
         assert is_unlocked(get_entry("case-study"), license_key=_bundle_key(), secret=SECRET) is True
+
+    def test_single_key_only_unlocks_matching_entry(self):
+        key = _single_key("case-study")
+        assert is_unlocked(get_entry("case-study"), license_key=key, secret=SECRET) is True
+        assert is_unlocked(get_entry("announcement"), license_key=key, secret=SECRET) is False
