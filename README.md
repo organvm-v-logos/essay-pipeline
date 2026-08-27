@@ -101,6 +101,7 @@ sample (`field-note`) ships open; the premium templates are unlocked once with a
 one-time-purchase license key (HMAC key check, no server, no subscription).
 
 - Catalog & pricing: [docs/templates/README.md](docs/templates/README.md)
+- API Documentation: [docs/api-docs.md](docs/api-docs.md)
 - Machine-readable manifest: `templates/manifest.yaml`
 - Storefront / gate: `src/template_store.py` — browse, show, and eject templates
 - License keys: `src/license.py` — issue (seller) and verify (buyer)
