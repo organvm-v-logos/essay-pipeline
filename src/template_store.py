@@ -1,8 +1,8 @@
 """Licensed catalog of essay templates (the sellable template library).
 
-The store reads ``templates/manifest.yaml`` and serves template bodies. Free
+The store reads templates/manifest.yaml and serves template bodies. Free
 templates are readable by anyone; premium templates are gated behind a valid
-HMAC license key (see :mod:`src.license`). This is the storefront layer that
+HMAC license key (see :mod:). This is the storefront layer that
 turns the schema-enforced templates into a one-time-purchase product.
 
 CLI:
@@ -22,7 +22,6 @@ import yaml
 
 from .license import LicenseError, verify_license
 
-# templates/ lives at the repo root, one level up from src/.
 TEMPLATES_DIR = Path(__file__).resolve().parents[1] / "templates"
 MANIFEST_NAME = "manifest.yaml"
 
@@ -41,8 +40,6 @@ class LicenseRequired(TemplateError):
 
 @dataclass(frozen=True)
 class TemplateEntry:
-    """One catalog entry resolved from the manifest."""
-
     id: str
     tier: str
     path: str
@@ -56,7 +53,6 @@ class TemplateEntry:
 
 
 def load_manifest(templates_dir: Path | str | None = None) -> dict:
-    """Load and minimally validate the catalog manifest."""
     base = Path(templates_dir) if templates_dir else TEMPLATES_DIR
     manifest_path = base / MANIFEST_NAME
     if not manifest_path.exists():
@@ -71,7 +67,6 @@ def load_manifest(templates_dir: Path | str | None = None) -> dict:
 
 
 def list_templates(templates_dir: Path | str | None = None) -> list[TemplateEntry]:
-    """Return all catalog entries."""
     manifest = load_manifest(templates_dir)
     entries = []
     for raw in manifest["templates"]:
@@ -89,7 +84,6 @@ def list_templates(templates_dir: Path | str | None = None) -> list[TemplateEntr
 
 
 def get_entry(template_id: str, templates_dir: Path | str | None = None) -> TemplateEntry:
-    """Look up a single catalog entry by id."""
     for entry in list_templates(templates_dir):
         if entry.id == template_id:
             return entry
@@ -101,7 +95,6 @@ def is_unlocked(
     license_key: str | None = None,
     secret: bytes | str | None = None,
 ) -> bool:
-    """Whether `entry` is accessible given (or lacking) a license key."""
     if not entry.is_premium:
         return True
     return _license_grants_template(license_key, entry.id, secret)
@@ -124,20 +117,13 @@ def read_template(
     templates_dir: Path | str | None = None,
     secret: bytes | str | None = None,
 ) -> str:
-    """Return a template's body, enforcing the license gate for premium ones.
-
-    Raises:
-        TemplateNotFound: Unknown template id.
-        LicenseRequired: Premium template requested without a valid license.
-        TemplateError: Template file missing on disk.
-    """
     base = Path(templates_dir) if templates_dir else TEMPLATES_DIR
     entry = get_entry(template_id, base)
 
     if entry.is_premium and not _license_grants_template(license_key, entry.id, secret):
         raise LicenseRequired(
             f"'{template_id}' is a premium template. Provide a valid premium-bundle "
-            f"key or a premium-single key for this template "
+            f"key, an active premium-subscription key, or a premium-single key for this template "
             f"(buy at the catalog in docs/templates/README.md, then pass --license)."
         )
 
@@ -165,8 +151,8 @@ def _cmd_list(args: argparse.Namespace) -> int:
 
     if locked_premium and args.license:
         print(
-            "\nSome premium templates are locked. Use a premium-bundle key "
-            "or a matching premium-single key."
+            "\nSome premium templates are locked. Use a premium-bundle key, "
+            "an active premium-subscription key, or a matching premium-single key."
         )
     elif locked_premium:
         print("\nPremium templates are locked. See docs/templates/README.md to purchase.")

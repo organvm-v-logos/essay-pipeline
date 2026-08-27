@@ -97,20 +97,23 @@ Unknown frontmatter keys are rejected by the validator to prevent schema drift.
 
 The same structural contract the validator enforces is also packaged as a
 sellable product: a catalog of **schema-enforced essay templates**. One free
-sample (`field-note`) ships open; the premium templates are unlocked once with a
-one-time-purchase license key (HMAC key check, no server, no subscription).
+sample (`field-note`) ships open; the premium templates are unlocked with a
+Stripe-issued or manually issued HMAC license key. Subscription grants can carry
+an expiration date, while one-time bundle/single-template keys remain perpetual.
 
 - Catalog & pricing: [docs/templates/README.md](docs/templates/README.md)
 - API Documentation: [docs/api-docs.md](docs/api-docs.md)
 - Machine-readable manifest: `templates/manifest.yaml`
 - Storefront / gate: `src/template_store.py` — browse, show, and eject templates
 - License keys: `src/license.py` — issue (seller) and verify (buyer)
-- Design rationale: [docs/adr/003-template-library-licensing.md](docs/adr/003-template-library-licensing.md)
+- Stripe checkout bridge: `src/billing.py` — create Checkout sessions and turn verified webhooks into license keys
+- Design rationale: [docs/adr/003-template-library-licensing.md](docs/adr/003-template-library-licensing.md), [docs/adr/004-stripe-checkout-license-bridge.md](docs/adr/004-stripe-checkout-license-bridge.md)
 
 ```bash
 essay-template list                         # free shows "open", premium "locked"
 essay-template show field-note              # free — no key needed
-essay-license issue --email buyer@x.com --sku premium-single --template case-study
+essay-billing checkout --sku premium-bundle --success-url https://example.com/success --cancel-url https://example.com/cancel
+essay-license issue --email buyer@x.com     # manual seller fallback after a sale
 essay-template eject case-study --output drafts/my-essay.md --license EPK1.…
 ```
 
